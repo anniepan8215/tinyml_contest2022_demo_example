@@ -137,8 +137,9 @@ if __name__ == '__main__':
     argparser.add_argument('--batchsz', type=int, help='total batchsz for traindb', default=32)
     argparser.add_argument('--cuda', type=int, default=0)
     argparser.add_argument('--size', type=int, default=1250)
-    argparser.add_argument('--path_data', type=str, default='H:/Date_Experiment/data_IEGMdb_ICCAD_Contest/segments-R250'
-                                                            '-BPF15_55-Noise/tinyml_contest_data_training/')
+    # argparser.add_argument('--path_data', type=str, default='H:/Date_Experiment/data_IEGMdb_ICCAD_Contest/segments-R250'
+    #                                                         '-BPF15_55-Noise/tinyml_contest_data_training/')
+    argparser.add_argument('--path_data', type=str, default='./data/')
     argparser.add_argument('--path_indices', type=str, default='./data_indices')
 
     args = argparser.parse_args()

@@ -157,7 +157,7 @@ class ToTensor(object):
 
 class IEGM_DataSET():
     def __init__(self, root_dir, indice_dir, mode, size, transform=None):
-        self.root_dir = root_dir
+        self.root_dir = root_dir  # argparser.add_argument('--path_data', type=str, default=...)
         self.indice_dir = indice_dir
         self.size = size
         self.names_list = []
