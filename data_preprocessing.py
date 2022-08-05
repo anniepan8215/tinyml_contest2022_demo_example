@@ -64,7 +64,7 @@ def main():
     y_time = data_1['IEGM_seg'].squeeze()
     # grating = np.sin(2 * np.pi * t / 200)
     # print(grating.shape)
-    y_freq = np.fft.fft2(y_time)
+    y_freq = np.fft.fft(y_time)
     freq = np.fft.fftfreq(t.shape[-1])
 
     plt.subplot(211)
