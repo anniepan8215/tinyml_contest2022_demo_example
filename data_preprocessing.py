@@ -25,31 +25,48 @@ def load_data_to_dict(root_dir, names_list, names_dict, idx):
 
 
 def load_data_to_array(root_dir, names_list, names_dict, idx):
-
+    # for pandas
     text_path = root_dir + names_list[idx]  # local path of target data
 
     if not os.path.isfile(text_path):
         print(text_path + 'does not exist')
         return None
 
-    IEGM_seg = txt_to_numpy(text_path, 1250).reshape(1, 1250, 1)
+    IEGM_seg = txt_to_numpy(text_path, 1250).squeeze()
+    print(IEGM_seg)
     label = int(names_dict[names_list[idx]])
-    sample = np.array([label,IEGM_seg])
+    sample = np.append(IEGM_seg,label)
 
-    return sample  # return a np.array with data in numpy.array and label
+    return sample  # return a np.array with data in numpy.array and label on last col(#1250)
 
+
+def data_plot(data, SIZE):
+    # plot in both time and frequency domain
+    t = np.arange(0, SIZE, 1)
+    y_time = data['IEGM_seg'].squeeze()
+    # grating = np.sin(2 * np.pi * t / 200)
+    # print(grating.shape)
+    y_freq = np.fft.fft(y_time)
+    freq = np.fft.fftfreq(t.shape[-1])
+
+    plt.subplot(211)
+    plt.plot(t, y_time)
+
+    plt.subplot(212)
+    plt.plot(freq, y_freq)
+
+    plt.show()
 
 
 def main():
     # Hyperparameters
-    SIZE = args.size # data point number per data
+    SIZE = args.size  # data point number per data
     path_data = args.path_data
     path_indices = args.path_indices
     # names_list = []
     names_dict = {}
 
-
-    # loading data
+    # loading data files from test_indics.csv and train_indice.csv
     csvdata_all = loadCSV(os.path.join(path_indices, 'train' + '_indice.csv'))
     csvdata_all.update(loadCSV(os.path.join(path_indices, 'test' + '_indice.csv')))
 
@@ -58,26 +75,25 @@ def main():
 
     names_list = list(names_dict.keys())  # all data file name
 
-    data_1 = load_data_to_dict(path_data, names_list, names_dict, 0)
+    data_all = []
+    for i in range(len(names_list)):
+    # for i in range(5):
+        data_all.append(load_data_to_array(path_data, names_list, names_dict, i))
 
-    t = np.arange(0,SIZE,1)
-    y_time = data_1['IEGM_seg'].squeeze()
-    # grating = np.sin(2 * np.pi * t / 200)
-    # print(grating.shape)
-    y_freq = np.fft.fft(y_time)
-    freq = np.fft.fftfreq(t.shape[-1])
+    data_array = np.array(data_all)  # all data in nparray
 
-    plt.subplot(211)
-    plt.plot(t,y_time)
+    df_data = pd.DataFrame(data_array)  # all data in df
 
-    plt.subplot(212)
-    plt.plot(freq,y_freq)
+    print(df_data.head())
 
-    plt.show()
-
-
-
-
+    # data_1 = load_data_to_dict(path_data, names_list, names_dict, 0)
+    #
+    #
+    # t = np.arange(0,SIZE,1)
+    # y_time = data_1['IEGM_seg'].squeeze()
+    # y_freq = np.fft.fft(y_time)  # calculate fft on series
+    # freq = np.fft.fftfreq(t.shape[-1])  # frequency
+    # # how to use np.fft.fft2()?
 
 
 if __name__ == '__main__':
