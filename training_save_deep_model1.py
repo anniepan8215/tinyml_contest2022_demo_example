@@ -5,9 +5,8 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
 from help_code_demo import ToTensor, IEGM_DataSET
-from models.model_1 import IEGMNet
-
-
+from models.CNNLSTM import CNNLSTM
+# training on CNNLSTM model
 
 def main():
     # Hyperparameters
@@ -20,8 +19,8 @@ def main():
     path_indices = args.path_indices
 
     # Instantiating NN
-    net = IEGMNet()
-    net.train()
+    net = CNNLSTM()
+    # net.train()
     net = net.float().to(device)
 
     # Start dataset loading
@@ -42,6 +41,7 @@ def main():
     testloader = DataLoader(testset, batch_size=BATCH_SIZE_TEST, shuffle=True, num_workers=0)
 
     print("Training Dataset loading finish.")
+    print("Data size "+str(SIZE))
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(net.parameters(), lr=LR)
@@ -54,7 +54,7 @@ def main():
 
     print("Start training")
     for epoch in range(epoch_num):  # loop over the dataset multiple times (specify the #epoch)
-
+        net.train()
         running_loss = 0.0
         correct = 0.0
         accuracy = 0.0
@@ -111,10 +111,10 @@ def main():
         Test_loss.append(running_loss_test / i)
         Test_acc.append((correct / total).item())
 
-    torch.save(net, './saved_models/IEGM_net.pkl')
-    torch.save(net.state_dict(), './saved_models/IEGM_net_state_dict.pkl')
+    torch.save(net, './saved_models/CNNLSTM.pkl')
+    torch.save(net.state_dict(), './saved_models/CNNLSTM_state_dict.pkl')
 
-    file = open('./saved_models/loss_acc.txt', 'w')
+    file = open('./saved_models/loss_acc_CNNLSTM.txt', 'w')
     file.write("Train_loss\n")
     file.write(str(Train_loss))
     file.write('\n\n')
