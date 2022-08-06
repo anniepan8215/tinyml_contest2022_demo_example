@@ -36,3 +36,6 @@ Once we obtain the onnx model file, we could deploy the model on the board by fo
 
 ## How do I obtain the scoring?
 After training your model and obtaining test outputs with above commands, you could evaluate the scores of your models using the scoring function specified in [TinyML Contest 2022 evaluation](https://tinymlcontest.github.io/TinyML-Design-Contest/Problems.html). 
+
+# Update:
+Testing CNNLSTM model on dataset.
