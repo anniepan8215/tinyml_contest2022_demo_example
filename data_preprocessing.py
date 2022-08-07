@@ -35,9 +35,10 @@ def load_data_to_array(root_dir, names_list, names_dict, idx):
     IEGM_seg = txt_to_numpy(text_path, 1250).squeeze()
     # print(IEGM_seg)
     label = int(names_dict[names_list[idx]])
-    sample = np.append(IEGM_seg, label)
+    # sample = np.append(IEGM_seg, label)
+    df = pd.DataFrame([[names_list[idx], IEGM_seg, label]], columns=['File Name', 'Data', 'Label'])
 
-    return sample  # return a np.array with data in numpy.array and label on last col(#1250)
+    return df  # return dataframe type dataset with column name
 
 
 def data_plot(data, SIZE):
@@ -75,19 +76,12 @@ def main():
 
     names_list = list(names_dict.keys())  # all data file name
 
-    data_all = []
+    data_all = pd.DataFrame()
     for i in range(len(names_list)):
         # for i in range(5):
-        data_all.append(load_data_to_array(path_data, names_list, names_dict, i))
+        df = load_data_to_array(path_data, names_list, names_dict, i)
+        data_all = pd.concat([data_all, df], ignore_index=True)
 
-    data_array = np.array(data_all)  # all data in nparray
-
-    df_data = pd.DataFrame(data_array)  # all data in df
-    df_0 = df_data.iloc[df_data[:, -1] == 0]
-    df_1 = df_data.iloc[df_data[:, -1] == 1]
-
-    print(df_0.head())
-    print(df_1.head())
 
     # data_1 = load_data_to_dict(path_data, names_list, names_dict, 0)
     #
