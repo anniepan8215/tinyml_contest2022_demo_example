@@ -16,3 +16,15 @@ In this mac_file, code added following to create "saved_models" automatecally
 
     if not os.path.isdir('./saved_models'):
         os.mkdir('./saved_models')
+
+## Code in testing_performances.py
+
+Change code from
+
+    net.cuda()
+        device = torch.device('cuda:0')
+
+To
+
+    net = net.float().to(device)
+       
