@@ -26,7 +26,8 @@ def load_data_to_dict(root_dir, names_list, names_dict, idx):
 
 def load_data_to_df(root_dir, names_list, names_dict, mode, idx):
     # for pandas
-    text_path = root_dir + names_list[idx]  # local path of target data
+    name = names_list[idx]
+    text_path = root_dir + name  # local path of target data
 
     if not os.path.isfile(text_path):
         print(text_path + 'does not exist')
@@ -34,9 +35,10 @@ def load_data_to_df(root_dir, names_list, names_dict, mode, idx):
 
     IEGM_seg = txt_to_numpy(text_path, 1250).squeeze()
     # print(IEGM_seg)
-    label = int(names_dict[names_list[idx]])
+    c = int(names_dict[name])
+    l = name.split("-")[1]
     # sample = np.append(IEGM_seg, label)
-    df = pd.DataFrame([[names_list[idx], IEGM_seg, mode, label]], columns=['File Name', 'Data', 'Mode', 'Label'])
+    df = pd.DataFrame([[name, IEGM_seg, mode, c, l]], columns=['File Name', 'Data', 'Mode', 'Class', 'Label'])
 
     return df  # return dataframe type dataset with column name
 
@@ -100,7 +102,7 @@ def main():
     path_train = load_name(csvdata_train)
     # path_all = path_test | path_train
 
-    data_all = pd.DataFrame()  # 4 columns: 'File Name', 'Data', 'Mode', 'Label'
+    data_all = pd.DataFrame()  # 4 columns: 'File Name', 'Data', 'Mode', 'Class', 'Label'
     for i in range(len(list(path_test.keys()))):
         df = load_data_to_df(path_data, list(path_test.keys()), path_test, 'test', i)
         data_all = pd.concat([data_all, df], ignore_index=True)
