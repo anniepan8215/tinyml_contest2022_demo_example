@@ -65,6 +65,12 @@ def fft_transfer(y_time,SIZE):
     freq = np.fft.fftfreq(t.shape[-1])  # frequency
     return (freq,y_freq)
 
+def status(x) :
+    return pd.Series([x.count(),x.min(),x.idxmin(),x.quantile(.25),x.median(),
+                      x.quantile(.75),x.mean(),x.max(),x.idxmax(),x.mad(),x.var(),
+                      x.std(),x.skew(),x.kurt()],index=['总数','最小值','最小值位置','25%分位数',
+                    '中位数','75%分位数','均值','最大值','最大值位数','平均绝对偏差','方差','标准差','偏度','峰度'])
+
 def main():
     # Hyperparameters
     SIZE = args.size  # data point number per data
@@ -76,9 +82,10 @@ def main():
     # loading data files from test_indics.csv and train_indice.csv
     csvdata_all = loadCSV(os.path.join(path_indices, 'train' + '_indice.csv'))
     csvdata_all.update(loadCSV(os.path.join(path_indices, 'test' + '_indice.csv')))
+    print("Loading file path complete")
 
     for i, (data_name, label) in enumerate(csvdata_all.items()):
-        names_dict[str(data_name)] = str(label[0])  # store data name and its index as dictionary
+        names_dict[str(data_name)] = label[0] # store data name and its index as dictionary
 
     names_list = list(names_dict.keys())  # all data file name
 
@@ -87,11 +94,22 @@ def main():
         # for i in range(5):
         df = load_data_to_array(path_data, names_list, names_dict, i)
         data_all = pd.concat([data_all, df], ignore_index=True)
+    print("loading dataframe complete")
+
+    print(data_all['Label'].value_counts())
+    '''
+    for all given data:
+        0    15987
+        1    14226
+    '''
+
+    data_0 = data_all.loc[data_all['Label'] == 0]
+    data_1 = data_all.loc[data_all['Label'] == 1]
 
 
-    # data_1 = load_data_to_dict(path_data, names_list, names_dict, 0)
-    #
-    #
+
+
+
     # t = np.arange(0,SIZE,1)
     # y_time = data_1['IEGM_seg'].squeeze()
     # y_freq = np.fft.fft(y_time)  # calculate fft on series
