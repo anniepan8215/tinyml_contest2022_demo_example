@@ -14,5 +14,5 @@ In original file, when we train the data, we need to create file named "saved_mo
 
 In this mac_file, code added following to create "saved_models" automatecally
 
-        if not os.path.isdir('./saved_models'):
-            os.mkdir('./saved_models')
+    if not os.path.isdir('./saved_models'):
+        os.mkdir('./saved_models')
