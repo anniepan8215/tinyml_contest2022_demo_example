@@ -59,6 +59,12 @@ def data_plot(data, SIZE):
     plt.show()
 
 
+def fft_transfer(y_time,SIZE):
+    t = np.arange(0, SIZE, 1)
+    y_freq = np.fft.fft(y_time)  # calculate fft on series
+    freq = np.fft.fftfreq(t.shape[-1])  # frequency
+    return (freq,y_freq)
+
 def main():
     # Hyperparameters
     SIZE = args.size  # data point number per data
