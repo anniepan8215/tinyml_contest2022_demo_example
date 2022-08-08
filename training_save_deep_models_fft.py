@@ -28,6 +28,8 @@ def main():
     SIZE = args.size
     path_data = args.path_data
     path_indices = args.path_indices
+    validation_split = args.path_validsz
+    # validation_split = .2
 
     # Instantiating NN
     net = IEGMNet()
@@ -41,7 +43,7 @@ def main():
                             size=SIZE,
                             transform=transforms.Compose([ToTensor()]))
 
-    trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+    # trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 
     testset = IEGM_DataSET(root_dir=path_data,
                            indice_dir=path_indices,
@@ -56,11 +58,21 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(net.parameters(), lr=LR)
     epoch_num = EPOCH
+    valid_size = int(validation_split * len(trainset))
+    train_size = len(trainset) - valid_size
+
+    train_dataset, valid_dataset = torch.utils.data.random_split(trainset, [train_size, valid_size])
+
+    trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+    validloader = DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 
     Train_loss = []
     Train_acc = []
+    valid_loss = []
+    valid_acc = []
     Test_loss = []
     Test_acc = []
+    min_valid_loss = np.inf
 
     print("Start training")
     for epoch in range(epoch_num):  # loop over the dataset multiple times (specify the #epoch)
@@ -95,35 +107,65 @@ def main():
         Train_loss.append(running_loss / i)
         Train_acc.append((accuracy / i).item())
 
-        running_loss = 0.0
-        accuracy = 0.0
+        # running_loss = 0.0
+        # accuracy = 0.0
 
         correct = 0.0
         total = 0.0
         i = 0.0
-        running_loss_test = 0.0
+        running_loss_valid = 0.0
 
-        for data_test in testloader:
-            net.eval()
-            IEGM_test, labels_test = data_test['IEGM_seg'], data_test['label']
-            IEGM_test = IEGM_test.float().to(device)
-            labels_test = labels_test.to(device)
-            outputs_test = net(IEGM_test)
-            _, predicted_test = torch.max(outputs_test.data, 1)
-            total += labels_test.size(0)
-            correct += (predicted_test == labels_test).sum()
+        net.eval()
+        for data_valid in validloader:
+            IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
+            IEGM_valid = fft_transfer(IEGM_valid)
+            IEGM_valid = IEGM_valid.float().to(device)
+            labels_valid = labels_valid.to(device)
+            outputs_valid = net(IEGM_valid)
+            _, predicted_valid = torch.max(outputs_valid.data, 1)
+            total += labels_valid.size(0)
+            correct += (predicted_valid == labels_valid).sum()
 
-            loss_test = criterion(outputs_test, labels_test)
-            running_loss_test += loss_test.item()
+            loss_valid = criterion(outputs_valid, labels_valid)
+            running_loss_valid += loss_valid.item()
             i += 1
 
-        print('Test Acc: %.5f Test Loss: %.5f' % (correct / total, running_loss_test / i))
+        print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
 
-        Test_loss.append(running_loss_test / i)
-        Test_acc.append((correct / total).item())
+        valid_loss.append(running_loss_valid / i)
+        valid_acc.append((correct / total).item())
 
-    torch.save(net, './saved_models/IEGM_net_fft.pkl')
-    torch.save(net.state_dict(), './saved_models/IEGM_net_fft_state_dict.pkl')
+        # running_loss = 0.0
+        # accuracy = 0.0
+
+        # correct = 0.0
+        # total = 0.0
+        # i = 0.0
+        # running_loss_test = 0.0
+        #
+        # for data_test in testloader:
+        #     net.eval()
+        #     IEGM_test, labels_test = data_test['IEGM_seg'], data_test['label']
+        #     IEGM_test = fft_transfer(IEGM_test)
+        #     IEGM_test = IEGM_test.float().to(device)
+        #     labels_test = labels_test.to(device)
+        #     outputs_test = net(IEGM_test)
+        #     _, predicted_test = torch.max(outputs_test.data, 1)
+        #     total += labels_test.size(0)
+        #     correct += (predicted_test == labels_test).sum()
+        #
+        #     loss_test = criterion(outputs_test, labels_test)
+        #     running_loss_test += loss_test.item()
+        #     i += 1
+        #
+        # print('Test Acc: %.5f Test Loss: %.5f' % (correct / total, running_loss_test / i))
+        #
+        # Test_loss.append(running_loss_test / i)
+        # Test_acc.append((correct / total).item())
+        if min_valid_loss > loss_valid:
+            min_valid_loss = loss_valid
+            torch.save(net, './saved_models/IEGM_net_fft.pkl')
+            torch.save(net.state_dict(), './saved_models/IEGM_net_fft_state_dict.pkl')
 
     file = open('./saved_models/loss_acc_fft.txt', 'w')
     file.write("Train_loss\n")
@@ -132,11 +174,11 @@ def main():
     file.write("Train_acc\n")
     file.write(str(Train_acc))
     file.write('\n\n')
-    file.write("Test_loss\n")
-    file.write(str(Test_loss))
+    file.write("Valid_loss\n")
+    file.write(str(valid_loss))
     file.write('\n\n')
-    file.write("Test_acc\n")
-    file.write(str(Test_acc))
+    file.write("Valid_acc\n")
+    file.write(str(valid_acc))
     file.write('\n\n')
 
     print('Finish training')
@@ -153,6 +195,7 @@ if __name__ == '__main__':
     #                                                         '-BPF15_55-Noise/tinyml_contest_data_training/')
     argparser.add_argument('--path_data', type=str, default='./data/')
     argparser.add_argument('--path_indices', type=str, default='./data_indices')
+    argparser.add_argument('--path_validsz', type=float, help='learning rate', default=0.2)
 
     args = argparser.parse_args()
 
