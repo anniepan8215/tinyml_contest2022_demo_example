@@ -1,5 +1,6 @@
 import csv, torch, os
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 def ACC(mylist):
@@ -208,3 +209,29 @@ def fft_transfer(ys_time, SIZE=1250):
             y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
             ys_freq.append(y_freq)
     return torch.tensor(np.array(ys_freq).reshape((-1, 1, SIZE, 1)))
+
+
+def plot_against_epoch_numbers(train_epoch_and_value_pairs=None, validation_epoch_and_value_pairs=None, train_label=None, val_label=None, title=None):
+    """
+    Helper to reduce code duplication when plotting quantities that vary over training epochs
+    epoch_and_value_pairs: An array_like consisting of pairs of the form (<epoch number>, <value of thing to plot>)
+    kwargs are forwarded to matplotlib.pyplot.plot
+    """
+    assert train_epoch_and_value_pairs is not None
+    assert train_label is not None
+    assert title is not None
+    if validation_epoch_and_value_pairs is None:
+        array = np.array(train_epoch_and_value_pairs)
+        plt.figure()
+        plt.plot(array[:, 0], array[:, 1], label=train_label)
+        plt.xlabel("epochs")
+        plt.title(title)
+    else:
+        assert val_label is not None
+        train_array = np.array(train_epoch_and_value_pairs)
+        val_array = np.array(validation_epoch_and_value_pairs)
+        plt.figure()
+        plt.plot(train_array[:, 0], train_array[:, 1], label=train_label)
+        plt.plot(val_array[:, 0], val_array[:, 1], label=val_label)
+        plt.xlabel("epochs")
+        plt.title(title)

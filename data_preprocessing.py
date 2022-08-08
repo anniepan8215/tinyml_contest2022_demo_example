@@ -68,13 +68,13 @@ def data_plot(data, SIZE, title):
 
 def data_list_plot(data_list, name_list, title, sampling_rate=250, interval=5):
     # plot in both time and frequency domain
-    t = np.arange(0, interval, 1 / sampling_rate)
+    t = np.arange(0, int(interval), 1 / int(sampling_rate))
     # y_time = data['IEGM_seg'].squeeze()
     plt.figure(figsize=(20, 10))
     for i, y_time in enumerate(data_list):
         name = name_list[i]
         y_freq = np.fft.fft(y_time)
-        freq = np.fft.fftfreq(t.shape[-1], d=1 / sampling_rate)  # d = Sample spacing (inverse of the sampling rate).
+        freq = np.fft.fftfreq(t.shape[-1], d=1 / int(sampling_rate))  # d = Sample spacing (inverse of the sampling rate).
         plt.subplot(211)
         plt.plot(t, y_time, label=name)
         plt.subplot(212)
@@ -218,5 +218,5 @@ if __name__ == '__main__':
     list_1 = [VFt[0], VFb[0], VT[0]]
     # data_plot(AFt[0],SIZE)
 
-    data_list_plot(list_0, ['AFT', 'SVT', 'VPD', 'AFb', 'SR'], 1250, 'AFT,SVT,VPD,AFb,SR')
-    data_list_plot(list_1, ['VFt', 'VFb', 'VT'], 1250, 'VFt,VFb,VT')
+    data_list_plot(list_0, ['AFT', 'SVT', 'VPD', 'AFb', 'SR'], 'AFT,SVT,VPD,AFb,SR')
+    data_list_plot(list_1, ['VFt', 'VFb', 'VT'], 'VFt,VFb,VT')

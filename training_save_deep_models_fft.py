@@ -6,17 +6,8 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
-from help_code_demo import ToTensor, IEGM_DataSET
+from help_code_demo import ToTensor, IEGM_DataSET, fft_transfer,plot_against_epoch_numbers
 from models.model_1 import IEGMNet
-
-
-def fft_transfer(ys_time):
-    ys_freq = []
-    ys_time = ys_time.squeeze()
-    for i in range(ys_time.size(dim=0)):
-        y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
-        ys_freq.append(y_freq)
-    return torch.tensor(np.array(ys_freq).reshape((-1,1,1250,1)))
 
 
 def main():
@@ -28,7 +19,8 @@ def main():
     SIZE = args.size
     path_data = args.path_data
     path_indices = args.path_indices
-    validation_split = args.path_validsz
+    validation_split = args.path_vtr
+    validation_step = args.valid_step
     # validation_split = .2
 
     # Instantiating NN
@@ -115,29 +107,30 @@ def main():
         i = 0.0
         running_loss_valid = 0.0
 
-        net.eval()
-        for data_valid in validloader:
-            IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
-            IEGM_valid = fft_transfer(IEGM_valid)
-            IEGM_valid = IEGM_valid.float().to(device)
-            labels_valid = labels_valid.to(device)
-            outputs_valid = net(IEGM_valid)
-            _, predicted_valid = torch.max(outputs_valid.data, 1)
-            total += labels_valid.size(0)
-            correct += (predicted_valid == labels_valid).sum()
+        if epoch % validation_step == 0:
+            net.eval()
+            for data_valid in validloader:
+                IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
+                IEGM_valid = fft_transfer(IEGM_valid)
+                IEGM_valid = IEGM_valid.float().to(device)
+                labels_valid = labels_valid.to(device)
+                outputs_valid = net(IEGM_valid)
+                _, predicted_valid = torch.max(outputs_valid.data, 1)
+                total += labels_valid.size(0)
+                correct += (predicted_valid == labels_valid).sum()
 
-            loss_valid = criterion(outputs_valid, labels_valid)
-            running_loss_valid += loss_valid.item()
-            i += 1
+                loss_valid = criterion(outputs_valid, labels_valid)
+                running_loss_valid += loss_valid.item()
+                i += 1
 
-        print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
+            print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
 
-        valid_loss.append(running_loss_valid / i)
-        valid_acc.append((correct / total).item())
-        if min_valid_loss > loss_valid:
-            min_valid_loss = loss_valid
-            torch.save(net, './saved_models/IEGM_net_fft.pkl')
-            torch.save(net.state_dict(), './saved_models/IEGM_net_fft_state_dict.pkl')
+            valid_loss.append(running_loss_valid / i)
+            valid_acc.append((correct / total).item())
+            if min_valid_loss > loss_valid:
+                min_valid_loss = loss_valid
+                torch.save(net, './saved_models/IEGM_net_fft.pkl')
+                torch.save(net.state_dict(), './saved_models/IEGM_net_fft_state_dict.pkl')
 
         # running_loss = 0.0
         # accuracy = 0.0
@@ -196,7 +189,8 @@ if __name__ == '__main__':
     #                                                         '-BPF15_55-Noise/tinyml_contest_data_training/')
     argparser.add_argument('--path_data', type=str, default='./data/')
     argparser.add_argument('--path_indices', type=str, default='./data_indices')
-    argparser.add_argument('--path_validsz', type=float, help='learning rate', default=0.2)
+    argparser.add_argument('--path_vtr', type=float, help='Validate train ratio', default=0.2)
+    argparser.add_argument('--valid_step', type=int, help='number of epoch for evaluation', default=1)
 
     args = argparser.parse_args()
 

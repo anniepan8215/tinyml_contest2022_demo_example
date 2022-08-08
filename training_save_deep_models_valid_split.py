@@ -20,7 +20,8 @@ def main():
     SIZE = args.size
     path_data = args.path_data
     path_indices = args.path_indices
-    validation_split = args.path_validsz
+    validation_split = args.path_vtr
+    validation_step = args.valid_step
 
     # Instantiating NN
     net = IEGMNet()
@@ -106,28 +107,29 @@ def main():
         i = 0.0
         running_loss_valid = 0.0
 
-        net.eval()
-        for data_valid in validloader:
-            IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
-            IEGM_valid = IEGM_valid.float().to(device)
-            labels_valid = labels_valid.to(device)
-            outputs_valid = net(IEGM_valid)
-            _, predicted_valid = torch.max(outputs_valid.data, 1)
-            total += labels_valid.size(0)
-            correct += (predicted_valid == labels_valid).sum()
+        if epoch % validation_step == 0:
+            net.eval()
+            for data_valid in validloader:
+                IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
+                IEGM_valid = IEGM_valid.float().to(device)
+                labels_valid = labels_valid.to(device)
+                outputs_valid = net(IEGM_valid)
+                _, predicted_valid = torch.max(outputs_valid.data, 1)
+                total += labels_valid.size(0)
+                correct += (predicted_valid == labels_valid).sum()
 
-            loss_valid = criterion(outputs_valid, labels_valid)
-            running_loss_valid += loss_valid.item()
-            i += 1
+                loss_valid = criterion(outputs_valid, labels_valid)
+                running_loss_valid += loss_valid.item()
+                i += 1
 
-        print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
+            print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
 
-        Valid_loss.append(running_loss_valid / i)
-        Valid_acc.append((correct / total).item())
-        if min_valid_loss > loss_valid:
-            min_valid_loss = loss_valid
-            torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
-            torch.save(net.state_dict(), './saved_models/IEGM_net_fft_valid_split.pkl')
+            Valid_loss.append(running_loss_valid / i)
+            Valid_acc.append((correct / total).item())
+            if min_valid_loss > loss_valid:
+                min_valid_loss = loss_valid
+                torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
+                torch.save(net.state_dict(), './saved_models/IEGM_net_fft_valid_split.pkl')
 
         # running_loss = 0.0
         # accuracy = 0.0
@@ -187,7 +189,8 @@ if __name__ == '__main__':
     #                                                         '-BPF15_55-Noise/tinyml_contest_data_training/')
     argparser.add_argument('--path_data', type=str, default='./data/')
     argparser.add_argument('--path_indices', type=str, default='./data_indices')
-    argparser.add_argument('--path_validsz', type=float, help='learning rate', default=0.2)
+    argparser.add_argument('--path_vtr', type=float, help='Validate train ratio', default=0.2)
+    argparser.add_argument('--valid_step', type=int, help='number of epoch for evaluation', default=1)
 
     args = argparser.parse_args()
 
