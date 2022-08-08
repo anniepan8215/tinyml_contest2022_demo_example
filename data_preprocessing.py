@@ -1,5 +1,7 @@
 import os
 
+from scipy.signal import butter, filtfilt
+
 from help_code_demo import ToTensor, IEGM_DataSET, txt_to_numpy, loadCSV, stats_report
 import numpy as np
 import torch
@@ -103,6 +105,28 @@ def load_name(datapaths):
         names_dict[str(data_name)] = label[0]  # store data name and its index as dictionary
 
     return names_dict
+
+
+def bp_filter(data, f_lo, f_hi, fs):
+    """ Digital band pass filter (6-th order Butterworth)
+    Args:
+        data: numpy.array, time along axis 0
+        (f_lo, f_hi): frequency band to extract [Hz]
+        fs: sampling frequency [Hz]
+    Returns:
+        data_filt: band-pass filtered data, same shape as data """
+    data_filt = np.zeros_like(data)
+    f_ny = fs / 2.  # Nyquist frequency
+    b_lo = f_lo / f_ny  # normalized frequency [0..1]
+    b_hi = f_hi / f_ny  # normalized frequency [0..1]
+    # band-pass filter parameters
+    p_lp = {"N": 6, "Wn": b_hi, "btype": "lowpass", "analog": False, "output": "ba"}
+    p_hp = {"N": 6, "Wn": b_lo, "btype": "highpass", "analog": False, "output": "ba"}
+    bp_b1, bp_a1 = butter(**p_lp)
+    bp_b2, bp_a2 = butter(**p_hp)
+    data_filt = filtfilt(bp_b1, bp_a1, data, axis=0)
+    data_filt = filtfilt(bp_b2, bp_a2, data_filt, axis=0)
+    return data_filt
 
 
 def main():

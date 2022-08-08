@@ -1,4 +1,6 @@
 import argparse
+
+import numpy as np
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
@@ -7,6 +9,14 @@ import torch.optim as optim
 from help_code_demo import ToTensor, IEGM_DataSET
 from models.model_1 import IEGMNet
 
+
+def fft_transfer(ys_time):
+    ys_freq = []
+    ys_time = ys_time.squeeze()
+    for i in range(ys_time.size(dim=0)):
+        y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
+        ys_freq.append(y_freq)
+    return torch.tensor(np.array(ys_freq).reshape((-1,1,1250,1)))
 
 
 def main():
@@ -61,7 +71,7 @@ def main():
         i = 0
         for j, data in enumerate(trainloader, 0):
             inputs, labels = data['IEGM_seg'], data['label']
-            print(type(inputs))
+            inputs = fft_transfer(inputs)
             inputs = inputs.float().to(device)
             labels = labels.to(device)
 
@@ -112,10 +122,10 @@ def main():
         Test_loss.append(running_loss_test / i)
         Test_acc.append((correct / total).item())
 
-    torch.save(net, './saved_models/IEGM_net.pkl')
-    torch.save(net.state_dict(), './saved_models/IEGM_net_state_dict.pkl')
+    torch.save(net, './saved_models/IEGM_net_fft.pkl')
+    torch.save(net.state_dict(), './saved_models/IEGM_net_fft_state_dict.pkl')
 
-    file = open('./saved_models/loss_acc.txt', 'w')
+    file = open('./saved_models/loss_acc_fft.txt', 'w')
     file.write("Train_loss\n")
     file.write(str(Train_loss))
     file.write('\n\n')
