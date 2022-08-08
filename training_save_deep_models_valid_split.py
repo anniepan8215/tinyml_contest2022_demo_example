@@ -126,8 +126,8 @@ def main():
 
             Valid_loss.append(running_loss_valid / i)
             Valid_acc.append((correct / total).item())
-            if min_valid_loss > loss_valid:
-                min_valid_loss = loss_valid
+            if min_valid_loss > running_loss_valid:
+                min_valid_loss = running_loss_valid
                 torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
                 torch.save(net.state_dict(), './saved_models/IEGM_net_fft_valid_split.pkl')
 
