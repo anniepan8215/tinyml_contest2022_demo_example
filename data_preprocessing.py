@@ -1,6 +1,6 @@
 import os
 
-from help_code_demo import ToTensor, IEGM_DataSET, txt_to_numpy, loadCSV
+from help_code_demo import ToTensor, IEGM_DataSET, txt_to_numpy, loadCSV, stats_report
 import numpy as np
 import torch
 import pandas as pd
@@ -8,6 +8,9 @@ import argparse
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from matplotlib import pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix
+import pickle
 
 
 def load_data_to_dict(root_dir, names_list, names_dict, idx):
@@ -34,6 +37,7 @@ def load_data_to_df(root_dir, names_list, names_dict, mode, idx):
         return None
 
     IEGM_seg = txt_to_numpy(text_path, 1250).squeeze()
+    # print(type(IEGM_seg))
     # print(IEGM_seg)
     c = int(names_dict[name])
     l = name.split("-")[1]
@@ -104,37 +108,66 @@ def main():
 
     data_all = pd.DataFrame()  # 4 columns: 'File Name', 'Data', 'Mode', 'Class', 'Label'
     for i in range(len(list(path_test.keys()))):
+        # for i in range(5):
         df = load_data_to_df(path_data, list(path_test.keys()), path_test, 'test', i)
         data_all = pd.concat([data_all, df], ignore_index=True)
 
     for i in range(len(list(path_train.keys()))):
+        # for i in range(5):
         df = load_data_to_df(path_data, list(path_train.keys()), path_train, 'train', i)
         data_all = pd.concat([data_all, df], ignore_index=True)
 
     print("loading data complete")
 
-    print(data_all.head)
-
-    print(data_all['Mode'].value_counts())
-    print((data_all.loc[data_all['Mode'] == 'train'])['Label'].value_counts())
-    print((data_all.loc[data_all['Mode'] == 'test'])['Label'].value_counts())
     '''
-    for all given data:
-        total 30213
-        0    15987
-        1    14226
-        train    24588
-        test      5625
-    for all train data:
-        0    12751
-        1    11837
-    for all test data:
-        0    3236
-        1    2389
-    '''
+       for all given data:
+           total 30213
+           0    15987
+           1    14226
+           train    24588
+           test      5625
+       for all train data:
+           0    12751
+           1    11837
+       for all test data:
+           0    3236
+           1    2389
+       '''
 
-    data_0 = data_all.loc[data_all['Label'] == 0]
-    data_1 = data_all.loc[data_all['Label'] == 1]
+    # print(data_all['Mode'].value_counts())
+    # print((data_all.loc[data_all['Mode'] == 'train'])['Label'].value_counts(ascending=True))
+    # print((data_all.loc[data_all['Mode'] == 'test'])['Label'].value_counts(ascending=True))
+
+    X_train = np.array([data for data in data_all.loc[data_all['Mode'] == 'train']['Data']])
+    y_train = data_all.loc[data_all['Mode'] == 'train']['Class'].to_numpy(dtype=float)
+    print(X_train.shape)
+    print(y_train.shape)
+    X_test = np.array([data for data in data_all.loc[data_all['Mode'] == 'test']['Data']])
+    y_test = data_all.loc[data_all['Mode'] == 'test']['Class'].to_numpy()
+    print(X_test.shape)
+    print(y_test.shape)
+
+    print("Logistic Regression model training and testing")
+    model = LogisticRegression(random_state=0).fit(X_train, y_train)
+    filename = 'log_reg_model.pkl'
+    pickle.dump(model, open('./saved_models/' + filename, 'wb'))
+    print("Logistic Regression model training and saving complete")
+    total = 5625
+    y_pred = model.predict(X_test)
+    print(np.sum(y_pred == 1))
+
+    correct = (y_pred == y_test).sum()
+    print('test acc = ', correct / total)
+    print('test correct = ', correct)
+    print('train acc = ', model.score(X_train, y_train))
+
+    segs_TN, segs_FN, segs_FP, segs_TP = confusion_matrix(y_test, y_pred).reshape(-1)
+
+    # report metrics
+    stats_file = open('./records/' + 'seg_stat_log_reg.txt', 'w')
+    stats_file.write('segments: TP, FN, FP, TN\n')
+    output_segs = stats_report([segs_TP, segs_FN, segs_FP, segs_TN])
+    stats_file.write(output_segs + '\n')
 
     # t = np.arange(0,SIZE,1)
     # y_time = data_1['IEGM_seg'].squeeze()
