@@ -64,15 +64,15 @@ def data_plot(data, SIZE, title):
     plt.show()
 
 
-def data_list_plot(data_list, name_list, SIZE, title):
+def data_list_plot(data_list, name_list, title, sampling_rate=250, interval=5):
     # plot in both time and frequency domain
-    t = np.arange(0, SIZE, 1)
+    t = np.arange(0, interval, 1 / sampling_rate)
     # y_time = data['IEGM_seg'].squeeze()
     plt.figure(figsize=(20, 10))
     for i, y_time in enumerate(data_list):
         name = name_list[i]
         y_freq = np.fft.fft(y_time)
-        freq = np.fft.fftfreq(t.shape[-1])
+        freq = np.fft.fftfreq(t.shape[-1], d=1 / sampling_rate)  # d = Sample spacing (inverse of the sampling rate).
         plt.subplot(211)
         plt.plot(t, y_time, label=name)
         plt.subplot(212)
@@ -82,11 +82,11 @@ def data_list_plot(data_list, name_list, SIZE, title):
     plt.show()
 
 
-def fft_transfer(y_time, SIZE):
-    t = np.arange(0, SIZE, 1)
+def fft_transfer(y_time, sampling_rate=250, interval=5):
+    t = np.arange(0, interval, 1 / sampling_rate)
     y_freq = np.fft.fft(y_time)  # calculate fft on series
-    freq = np.fft.fftfreq(t.shape[-1])  # frequency
-    return (freq, y_freq)
+    freq = np.fft.fftfreq(t.shape[-1], d=1 / sampling_rate)  # frequency
+    return freq, y_freq
 
 
 def status(x):
