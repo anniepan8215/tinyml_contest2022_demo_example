@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
-from help_code_demo import ToTensor, IEGM_DataSET, fft_transfer,plot_against_epoch_numbers
+from help_code_demo import ToTensor, IEGM_DataSET, fft_transfer, plot_against_epoch_numbers
 from models.model_1 import IEGMNet
 
 
@@ -160,9 +160,6 @@ def main():
         #
         # Test_loss.append(running_loss_test / i)
         # Test_acc.append((correct / total).item())
-
-
-
 
     file = open('./saved_models/loss_acc_fft.txt', 'w')
     file.write("Train_loss\n")
