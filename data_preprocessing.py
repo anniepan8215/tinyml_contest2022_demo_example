@@ -47,21 +47,38 @@ def load_data_to_df(root_dir, names_list, names_dict, mode, idx):
     return df  # return dataframe type dataset with column name
 
 
-def data_plot(data, SIZE):
+def data_plot(data, SIZE, title):
     # plot in both time and frequency domain
     t = np.arange(0, SIZE, 1)
-    y_time = data['IEGM_seg'].squeeze()
+    # y_time = data['IEGM_seg'].squeeze()
+    y_time = data
     # grating = np.sin(2 * np.pi * t / 200)
     # print(grating.shape)
     y_freq = np.fft.fft(y_time)
     freq = np.fft.fftfreq(t.shape[-1])
-
     plt.subplot(211)
     plt.plot(t, y_time)
-
     plt.subplot(212)
     plt.plot(freq, y_freq)
+    plt.suptitle(title)
+    plt.show()
 
+
+def data_list_plot(data_list, name_list, SIZE, title):
+    # plot in both time and frequency domain
+    t = np.arange(0, SIZE, 1)
+    # y_time = data['IEGM_seg'].squeeze()
+    plt.figure(figsize=(20, 10))
+    for i, y_time in enumerate(data_list):
+        name = name_list[i]
+        y_freq = np.fft.fft(y_time)
+        freq = np.fft.fftfreq(t.shape[-1])
+        plt.subplot(211)
+        plt.plot(t, y_time, label=name)
+        plt.subplot(212)
+        plt.plot(freq, y_freq, label=name)
+    plt.suptitle(title)
+    plt.legend(loc='best')
     plt.show()
 
 
@@ -174,15 +191,19 @@ def main():
            1    2389
        '''
 
-    # print(data_all['Mode'].value_counts())
-    # print((data_all.loc[data_all['Mode'] == 'train'])['Label'].value_counts(ascending=True))
-    # print((data_all.loc[data_all['Mode'] == 'test'])['Label'].value_counts(ascending=True))
+    print(data_all['Mode'].value_counts())
+    print((data_all.loc[data_all['Mode'] == 'train'])['Label'].value_counts(ascending=True))
+    print((data_all.loc[data_all['Mode'] == 'test'])['Label'].value_counts(ascending=True))
+    print((data_all.loc[data_all['Class'] == 0])['Label'].value_counts(ascending=True))
+    print((data_all.loc[data_all['Class'] == 1])['Label'].value_counts(ascending=True))
 
     # t = np.arange(0,SIZE,1)
     # y_time = data_1['IEGM_seg'].squeeze()
     # y_freq = np.fft.fft(y_time)  # calculate fft on series
     # freq = np.fft.fftfreq(t.shape[-1])  # frequency
     # # how to use np.fft.fft2()?
+
+    return data_all
 
 
 if __name__ == '__main__':
@@ -198,4 +219,20 @@ if __name__ == '__main__':
     #
     # print("device is --------------", device)
 
-    main()
+    data_all = main()
+    AFt = np.array([data for data in data_all.loc[data_all['Label'] == 'AFt']['Data']])
+    SVT = np.array([data for data in data_all.loc[data_all['Label'] == 'SVT']['Data']])
+    VPD = np.array([data for data in data_all.loc[data_all['Label'] == 'VPD']['Data']])
+    AFb = np.array([data for data in data_all.loc[data_all['Label'] == 'AFb']['Data']])
+    SR = np.array([data for data in data_all.loc[data_all['Label'] == 'SR']['Data']])
+
+    VFt = np.array([data for data in data_all.loc[data_all['Label'] == 'VFt']['Data']])
+    VFb = np.array([data for data in data_all.loc[data_all['Label'] == 'VFb']['Data']])
+    VT = np.array([data for data in data_all.loc[data_all['Label'] == 'VT']['Data']])
+
+    list_0 = [AFt[0], SVT[0], VPD[0], AFb[0], SR[0]]
+    list_1 = [VFt[0], VFb[0], VT[0]]
+    # data_plot(AFt[0],SIZE)
+
+    data_list_plot(list_0, ['AFT','SVT','VPD','AFb','SR'], 1250, 'AFT,SVT,VPD,AFb,SR')
+    data_list_plot(list_1, ['VFt', 'VFb', 'VT'], 1250, 'VFt,VFb,VT')

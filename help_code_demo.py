@@ -81,6 +81,7 @@ def FB(mylist, beta=2):
     return f1
 
 def stats_report(mylist):
+    # segs_TP, segs_FN, segs_FP, segs_TN
     f1 = round(F1(mylist), 5)
     fb = round(FB(mylist), 5)
     se = round(Sensitivity(mylist), 5)
