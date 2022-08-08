@@ -10,7 +10,6 @@ import torchvision.transforms as transforms
 from matplotlib import pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix
-import pickle
 
 
 def load_data_to_dict(root_dir, names_list, names_dict, idx):
