@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
-from help_code_demo import ToTensor, IEGM_DataSET,fft_transfer
+from help_code_demo import ToTensor, IEGM_DataSET
 from models.model_1 import IEGMNet
 
 
@@ -126,8 +126,8 @@ def main():
 
             Valid_loss.append(running_loss_valid / i)
             Valid_acc.append((correct / total).item())
-            if min_valid_loss > running_loss_valid:
-                min_valid_loss = running_loss_valid
+            if min_valid_loss > running_loss_valid / i:
+                min_valid_loss = running_loss_valid / i
                 torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
                 torch.save(net.state_dict(), './saved_models/IEGM_net_fft_valid_split.pkl')
 
