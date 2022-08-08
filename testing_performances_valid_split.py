@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from copy import deepcopy
 import torchvision.transforms as transforms
 
-from help_code_demo import ToTensor, IEGM_DataSET, stats_report, fft_transfer
+from help_code_demo import ToTensor, IEGM_DataSET, stats_report
 
 
 def main():
@@ -17,16 +17,16 @@ def main():
     random.seed(seed)
 
     # Hyperparameters
-    BATCH_SIZE_TEST = 1  #  test batch == 1?
+    BATCH_SIZE_TEST = 1
     SIZE = args.size
     path_data = args.path_data
     path_records = args.path_record
     path_net = args.path_net
     path_indices = args.path_indices
-    stats_file = open(path_records + 'seg_stat_fft.txt', 'w')
+    stats_file = open(path_records + 'seg_stat_valid_split.txt', 'w')
 
     # load trained network
-    net = torch.load(path_net + 'IEGM_net_fft.pkl', map_location='cuda:0')
+    net = torch.load(path_net + 'IEGM_net_valid_split.pkl', map_location='cuda:0')
     net.eval()
     net.cuda()
     device = torch.device('cuda:0')
@@ -50,7 +50,6 @@ def main():
         IEGM_test, labels_test = data_test['IEGM_seg'], data_test['label']
         seg_label = deepcopy(labels_test)
 
-        IEGM_test = fft_transfer(IEGM_test)
         IEGM_test = IEGM_test.float().to(device)
         labels_test = labels_test.to(device)
 
@@ -58,7 +57,6 @@ def main():
         _, predicted_test = torch.max(outputs_test.data, 1)
         total += 1
         correct += (predicted_test == labels_test).sum()
-
 
         if seg_label == 0:
             segs_FP += (labels_test.size(0) - (predicted_test == labels_test).sum()).item()
@@ -68,7 +66,8 @@ def main():
             segs_TP += (predicted_test == labels_test).sum().item()
 
     # report metrics
-    stats_file.write('Accuracy:'+str(correct/total)+'\n')
+    print('Accuracy:'+str(correct/total)+'  Total:'+str(total)+'  Correct:' + str(correct))
+    stats_file.write('Accuracy:' + str(correct / total) + '\n')
     stats_file.write('segments: TP, FN, FP, TN\n')
     output_segs = stats_report([segs_TP, segs_FN, segs_FP, segs_TN])
     stats_file.write(output_segs + '\n')

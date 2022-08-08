@@ -1,0 +1,12 @@
+Accuracy:tensor(0.9276, device='cuda:0')
+segments: TP, FN, FP, TN
+[2153, 236, 171, 3065]
+F-1 = 0.91364
+F-B = 0.90614
+SEN = 0.90121
+SPE = 0.94716
+BAC = 0.92419
+ACC = 0.92764
+PPV = 0.92642
+NPV = 0.92851
+

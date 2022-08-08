@@ -61,7 +61,6 @@ def main():
         i = 0
         for j, data in enumerate(trainloader, 0):
             inputs, labels = data['IEGM_seg'], data['label']
-            print(type(inputs))
             inputs = inputs.float().to(device)
             labels = labels.to(device)
 

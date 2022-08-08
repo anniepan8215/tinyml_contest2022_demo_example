@@ -6,17 +6,9 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
-from help_code_demo import ToTensor, IEGM_DataSET
+from help_code_demo import ToTensor, IEGM_DataSET,fft_transfer
 from models.model_1 import IEGMNet
 
-
-def fft_transfer(ys_time):
-    ys_freq = []
-    ys_time = ys_time.squeeze()
-    for i in range(ys_time.size(dim=0)):
-        y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
-        ys_freq.append(y_freq)
-    return torch.tensor(np.array(ys_freq).reshape((-1,1,1250,1)))
 
 
 def main():
@@ -29,7 +21,6 @@ def main():
     path_data = args.path_data
     path_indices = args.path_indices
     validation_split = args.path_validsz
-    # validation_split = .2
 
     # Instantiating NN
     net = IEGMNet()
@@ -53,11 +44,6 @@ def main():
     #
     # testloader = DataLoader(testset, batch_size=BATCH_SIZE_TEST, shuffle=True, num_workers=0)
 
-    print("Training Dataset loading finish.")
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(net.parameters(), lr=LR)
-    epoch_num = EPOCH
     valid_size = int(validation_split * len(trainset))
     train_size = len(trainset) - valid_size
 
@@ -66,12 +52,18 @@ def main():
     trainloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
     validloader = DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 
+    print("Training Dataset loading finish.")
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(net.parameters(), lr=LR)
+    epoch_num = EPOCH
+
     Train_loss = []
     Train_acc = []
-    valid_loss = []
-    valid_acc = []
     # Test_loss = []
     # Test_acc = []
+    Valid_loss = []
+    Valid_acc = []
     min_valid_loss = np.inf
 
     print("Start training")
@@ -83,7 +75,6 @@ def main():
         i = 0
         for j, data in enumerate(trainloader, 0):
             inputs, labels = data['IEGM_seg'], data['label']
-            inputs = fft_transfer(inputs)
             inputs = inputs.float().to(device)
             labels = labels.to(device)
 
@@ -118,7 +109,6 @@ def main():
         net.eval()
         for data_valid in validloader:
             IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
-            IEGM_valid = fft_transfer(IEGM_valid)
             IEGM_valid = IEGM_valid.float().to(device)
             labels_valid = labels_valid.to(device)
             outputs_valid = net(IEGM_valid)
@@ -132,16 +122,16 @@ def main():
 
         print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
 
-        valid_loss.append(running_loss_valid / i)
-        valid_acc.append((correct / total).item())
+        Valid_loss.append(running_loss_valid / i)
+        Valid_acc.append((correct / total).item())
         if min_valid_loss > loss_valid:
             min_valid_loss = loss_valid
-            torch.save(net, './saved_models/IEGM_net_fft.pkl')
-            torch.save(net.state_dict(), './saved_models/IEGM_net_fft_state_dict.pkl')
+            torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
+            torch.save(net.state_dict(), './saved_models/IEGM_net_fft_valid_split.pkl')
 
         # running_loss = 0.0
         # accuracy = 0.0
-
+        #
         # correct = 0.0
         # total = 0.0
         # i = 0.0
@@ -150,7 +140,6 @@ def main():
         # for data_test in testloader:
         #     net.eval()
         #     IEGM_test, labels_test = data_test['IEGM_seg'], data_test['label']
-        #     IEGM_test = fft_transfer(IEGM_test)
         #     IEGM_test = IEGM_test.float().to(device)
         #     labels_test = labels_test.to(device)
         #     outputs_test = net(IEGM_test)
@@ -167,8 +156,10 @@ def main():
         # Test_loss.append(running_loss_test / i)
         # Test_acc.append((correct / total).item())
 
+    torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
+    torch.save(net.state_dict(), './saved_models/IEGM_net_state_dict_valid_split.pkl')
 
-    file = open('./saved_models/loss_acc_fft.txt', 'w')
+    file = open('./saved_models/loss_acc_valid_split.txt', 'w')
     file.write("Train_loss\n")
     file.write(str(Train_loss))
     file.write('\n\n')
@@ -176,10 +167,10 @@ def main():
     file.write(str(Train_acc))
     file.write('\n\n')
     file.write("Valid_loss\n")
-    file.write(str(valid_loss))
+    file.write(str(Valid_loss))
     file.write('\n\n')
     file.write("Valid_acc\n")
-    file.write(str(valid_acc))
+    file.write(str(Valid_acc))
     file.write('\n\n')
 
     print('Finish training')

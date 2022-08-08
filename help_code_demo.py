@@ -1,6 +1,7 @@
 import csv, torch, os
 import numpy as np
 
+
 def ACC(mylist):
     tp, fn, fp, tn = mylist[0], mylist[1], mylist[2], mylist[3]
     total = sum(mylist)
@@ -77,8 +78,9 @@ def FB(mylist, beta=2):
     if precision + recall == 0:
         f1 = 0
     else:
-        f1 = (1+beta**2) * (precision * recall) / ((beta**2)*precision + recall)
+        f1 = (1 + beta ** 2) * (precision * recall) / ((beta ** 2) * precision + recall)
     return f1
+
 
 def stats_report(mylist):
     # segs_TP, segs_FN, segs_FP, segs_TN
@@ -111,6 +113,7 @@ def stats_report(mylist):
     print("NPV = ", NPV(mylist))
 
     return output
+
 
 def loadCSV(csvf):
     """
@@ -191,5 +194,17 @@ def pytorch2onnx(net_path, net_name, size):
 
     dummy_input = torch.randn(1, 1, size, 1)
 
-    optName = str(net_name)+'.onnx'
+    optName = str(net_name) + '.onnx'
     torch.onnx.export(net, dummy_input, optName, verbose=True)
+
+
+def fft_transfer(ys_time, SIZE=1250):
+    ys_freq = []
+    ys_time = ys_time.squeeze()
+    if len(list(ys_time.size())) == 1:
+        ys_freq.append(np.fft.fft(ys_time))
+    else:
+        for i in range(ys_time.size(dim=0)):
+            y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
+            ys_freq.append(y_freq)
+    return torch.tensor(np.array(ys_freq).reshape((-1, 1, SIZE, 1)))
