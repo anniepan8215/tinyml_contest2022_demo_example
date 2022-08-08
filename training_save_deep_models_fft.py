@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from help_code_demo import ToTensor, IEGM_DataSET, fft_transfer, plot_against_epoch_numbers
 from models.model_1 import IEGMNet
-
+import time
 
 def main():
     # Hyperparameters
@@ -66,8 +66,12 @@ def main():
     # Test_acc = []
     min_valid_loss = np.inf
 
+
+    start = time.time()
+
     print("Start training")
     for epoch in range(epoch_num):  # loop over the dataset multiple times (specify the #epoch)
+
 
         running_loss = 0.0
         correct = 0.0
@@ -161,6 +165,9 @@ def main():
         # Test_loss.append(running_loss_test / i)
         # Test_acc.append((correct / total).item())
 
+    stop = time.time()
+    total_time = stop-start
+
     file = open('./saved_models/loss_acc_fft.txt', 'w')
     file.write("Train_loss\n")
     file.write(str(Train_loss))
@@ -173,6 +180,9 @@ def main():
     file.write('\n\n')
     file.write("Valid_acc\n")
     file.write(str(valid_acc))
+    file.write('\n\n')
+    file.write("Total training time\n")
+    file.write(str(total_time))
     file.write('\n\n')
 
     print('Finish training')

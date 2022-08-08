@@ -1,4 +1,5 @@
 import argparse
+import time
 
 import numpy as np
 import torch
@@ -66,6 +67,7 @@ def main():
     Valid_loss = []
     Valid_acc = []
     min_valid_loss = np.inf
+    start = time.time()
 
     print("Start training")
     for epoch in range(epoch_num):  # loop over the dataset multiple times (specify the #epoch)
@@ -159,8 +161,8 @@ def main():
         # Test_loss.append(running_loss_test / i)
         # Test_acc.append((correct / total).item())
 
-    torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
-    torch.save(net.state_dict(), './saved_models/IEGM_net_state_dict_valid_split.pkl')
+    stop = time.time()
+    total_time = stop - start
 
     file = open('./saved_models/loss_acc_valid_split.txt', 'w')
     file.write("Train_loss\n")
@@ -174,6 +176,9 @@ def main():
     file.write('\n\n')
     file.write("Valid_acc\n")
     file.write(str(Valid_acc))
+    file.write('\n\n')
+    file.write("Total training time\n")
+    file.write(str(total_time))
     file.write('\n\n')
 
     print('Finish training')
