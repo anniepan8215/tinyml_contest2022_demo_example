@@ -11,7 +11,6 @@ from matplotlib import pyplot as plt
 from sklearn.linear_model import LogisticRegression
 
 
-
 def load_data_to_dict(root_dir, names_list, names_dict, idx):
     text_path = root_dir + names_list[idx]  # local path of target data
 
@@ -41,7 +40,9 @@ def load_data_to_df(root_dir, names_list, names_dict, mode, idx):
     c = int(names_dict[name])
     l = name.split("-")[1]
     # sample = np.append(IEGM_seg, label)
-    df = pd.DataFrame([[name, IEGM_seg, mode, c, l]], columns=['File Name', 'Data', 'Mode', 'Class', 'Label'])
+    ID = name.split("-")[0]
+    df = pd.DataFrame([[name, ID, IEGM_seg, mode, c, l]],
+                      columns=['File Name', 'Patient ID', 'Data', 'Mode', 'Class', 'Label'])
 
     return df  # return dataframe type dataset with column name
 
@@ -104,9 +105,6 @@ def load_name(datapaths):
     return names_dict
 
 
-
-
-
 def main():
     # Hyperparameters
     SIZE = args.size  # data point number per data
@@ -125,7 +123,7 @@ def main():
     path_train = load_name(csvdata_train)
     # path_all = path_test | path_train
 
-    data_all = pd.DataFrame()  # 5 columns: 'File Name', 'Data', 'Mode', 'Class', 'Label'
+    data_all = pd.DataFrame()  # 6 columns: 'File Name', 'Patient ID', 'Data', 'Mode', 'Class', 'Label'
     for i in range(len(list(path_test.keys()))):
         # for i in range(5):
         df = load_data_to_df(path_data, list(path_test.keys()), path_test, 'test', i)
@@ -196,5 +194,5 @@ if __name__ == '__main__':
     list_1 = [VFt[0], VFb[0], VT[0]]
     # data_plot(AFt[0],SIZE)
 
-    data_list_plot(list_0, ['AFT','SVT','VPD','AFb','SR'], 1250, 'AFT,SVT,VPD,AFb,SR')
+    data_list_plot(list_0, ['AFT', 'SVT', 'VPD', 'AFb', 'SR'], 1250, 'AFT,SVT,VPD,AFb,SR')
     data_list_plot(list_1, ['VFt', 'VFb', 'VT'], 1250, 'VFt,VFb,VT')
