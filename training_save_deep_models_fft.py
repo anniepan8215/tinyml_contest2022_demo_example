@@ -161,6 +161,8 @@ def main():
         # Test_acc.append((correct / total).item())
 
 
+
+
     file = open('./saved_models/loss_acc_fft.txt', 'w')
     file.write("Train_loss\n")
     file.write(str(Train_loss))
