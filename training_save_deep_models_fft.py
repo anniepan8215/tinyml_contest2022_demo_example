@@ -18,6 +18,31 @@ def fft_transfer(ys_time):
         ys_freq.append(y_freq)
     return torch.tensor(np.array(ys_freq).reshape((-1,1,1250,1)))
 
+def plot_against_epoch_numbers(train_epoch_and_value_pairs=None, validation_epoch_and_value_pairs=None, train_label=None, val_label=None, title=None):
+    """
+    Helper to reduce code duplication when plotting quantities that vary over training epochs
+    epoch_and_value_pairs: An array_like consisting of pairs of the form (<epoch number>, <value of thing to plot>)
+    kwargs are forwarded to matplotlib.pyplot.plot
+    """
+    assert train_epoch_and_value_pairs is not None
+    assert train_label is not None
+    assert title is not None
+    if validation_epoch_and_value_pairs is None:
+        array = np.array(train_epoch_and_value_pairs)
+        plt.figure()
+        plt.plot(array[:, 0], array[:, 1], label=train_label)
+        plt.xlabel("epochs")
+        plt.title(title)
+    else:
+        assert val_label is not None
+        train_array = np.array(train_epoch_and_value_pairs)
+        val_array = np.array(validation_epoch_and_value_pairs)
+        plt.figure()
+        plt.plot(train_array[:, 0], train_array[:, 1], label=train_label)
+        plt.plot(val_array[:, 0], val_array[:, 1], label=val_label)
+        plt.xlabel("epochs")
+        plt.title(title)
+    
 
 def main():
     # Hyperparameters
@@ -29,11 +54,11 @@ def main():
     path_data = args.path_data
     path_indices = args.path_indices
     validation_split = args.path_validsz
+    validation_step = args.valid_step
     # validation_split = .2
 
     # Instantiating NN
     net = IEGMNet()
-    net.train()
     net = net.float().to(device)
 
     # Start dataset loading
@@ -76,7 +101,7 @@ def main():
 
     print("Start training")
     for epoch in range(epoch_num):  # loop over the dataset multiple times (specify the #epoch)
-
+        net.train()
         running_loss = 0.0
         correct = 0.0
         accuracy = 0.0
@@ -104,8 +129,8 @@ def main():
         print('[Epoch, Batches] is [%d, %5d] \nTrain Acc: %.5f Train loss: %.5f' %
               (epoch + 1, i, accuracy / i, running_loss / i))
 
-        Train_loss.append(running_loss / i)
-        Train_acc.append((accuracy / i).item())
+        Train_loss.append([epoch (running_loss / i)])
+        Train_acc.append([epoch (accuracy / i).item()])
 
         # running_loss = 0.0
         # accuracy = 0.0
@@ -114,30 +139,27 @@ def main():
         total = 0.0
         i = 0.0
         running_loss_valid = 0.0
+        if epoch % validation_step == 0:
+            net.eval()
+            with torch.no_grad():
+                for data_valid in validloader:
+                    IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
+                    IEGM_valid = fft_transfer(IEGM_valid)
+                    IEGM_valid = IEGM_valid.float().to(device)
+                    labels_valid = labels_valid.to(device)
+                    outputs_valid = net(IEGM_valid)
+                    _, predicted_valid = torch.max(outputs_valid.data, 1)
+                    total += labels_valid.size(0)
+                    correct += (predicted_valid == labels_valid).sum()
 
-        net.eval()
-        for data_valid in validloader:
-            IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
-            IEGM_valid = fft_transfer(IEGM_valid)
-            IEGM_valid = IEGM_valid.float().to(device)
-            labels_valid = labels_valid.to(device)
-            outputs_valid = net(IEGM_valid)
-            _, predicted_valid = torch.max(outputs_valid.data, 1)
-            total += labels_valid.size(0)
-            correct += (predicted_valid == labels_valid).sum()
+                    loss_valid = criterion(outputs_valid, labels_valid)
+                    running_loss_valid += loss_valid.item()
+                    i += 1
 
-            loss_valid = criterion(outputs_valid, labels_valid)
-            running_loss_valid += loss_valid.item()
-            i += 1
-
-        print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
-
-        valid_loss.append(running_loss_valid / i)
-        valid_acc.append((correct / total).item())
-        if min_valid_loss > loss_valid:
-            min_valid_loss = loss_valid
-            torch.save(net, './saved_models/IEGM_net_fft.pkl')
-            torch.save(net.state_dict(), './saved_models/IEGM_net_fft_state_dict.pkl')
+            print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
+            validation_loss = running_loss_valid / i
+            valid_loss.append([epoch running_loss_valid / i])
+            valid_acc.append([epoch (correct / total).item()])
 
         # running_loss = 0.0
         # accuracy = 0.0
@@ -166,7 +188,10 @@ def main():
         #
         # Test_loss.append(running_loss_test / i)
         # Test_acc.append((correct / total).item())
-
+            if min_valid_loss > validation_loss:
+                min_valid_loss = validation_loss
+                torch.save(net, './saved_models/IEGM_net_fft.pkl')
+                torch.save(net.state_dict(), './saved_models/IEGM_net_fft_state_dict.pkl')
 
     file = open('./saved_models/loss_acc_fft.txt', 'w')
     file.write("Train_loss\n")
@@ -181,7 +206,8 @@ def main():
     file.write("Valid_acc\n")
     file.write(str(valid_acc))
     file.write('\n\n')
-
+    plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_loss, validation_epoch_and_value_pairs=valid_loss, train_label='training loss', val_label='validation loss', title='Loss Plot')
+    plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_acc, validation_epoch_and_value_pairs=valid_acc, train_label='training accuracy', val_label='validation accuracy', title='Accuracy Plot')
     print('Finish training')
 
 
@@ -196,7 +222,8 @@ if __name__ == '__main__':
     #                                                         '-BPF15_55-Noise/tinyml_contest_data_training/')
     argparser.add_argument('--path_data', type=str, default='./data/')
     argparser.add_argument('--path_indices', type=str, default='./data_indices')
-    argparser.add_argument('--path_validsz', type=float, help='learning rate', default=0.2)
+    argparser.add_argument('--path_validsz', type=float, help='split ratio', default=0.2)
+    argparser.add_argument('--valid_step', type=int, help='number of epoch for evaluation', default=5)
 
     args = argparser.parse_args()
 
