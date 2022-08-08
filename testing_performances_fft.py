@@ -43,8 +43,6 @@ def main():
     segs_TN = 0
     segs_FP = 0
     segs_FN = 0
-    correct = 0.0
-    total = 0.0
 
     for data_test in testloader:
         IEGM_test, labels_test = data_test['IEGM_seg'], data_test['label']
@@ -56,8 +54,6 @@ def main():
 
         outputs_test = net(IEGM_test)
         _, predicted_test = torch.max(outputs_test.data, 1)
-        total += 1
-        correct += (predicted_test == labels_test).sum()
 
 
         if seg_label == 0:
@@ -68,7 +64,6 @@ def main():
             segs_TP += (predicted_test == labels_test).sum().item()
 
     # report metrics
-    stats_file.write('Accuracy:'+str(correct/total)+'\n')
     stats_file.write('segments: TP, FN, FP, TN\n')
     output_segs = stats_report([segs_TP, segs_FN, segs_FP, segs_TN])
     stats_file.write(output_segs + '\n')
