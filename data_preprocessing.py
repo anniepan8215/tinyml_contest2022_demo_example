@@ -88,56 +88,12 @@ def load_name(datapaths):
     return names_dict
 
 
-def main():
-    # Hyperparameters
-    SIZE = args.size  # data point number per data
-    path_data = args.path_data
-    path_indices = args.path_indices
-    # names_list = []
-    names_dict = {}
-
-    # loading data files from test_indics.csv and train_indice.csv
-    csvdata_train = loadCSV(os.path.join(path_indices, 'train' + '_indice.csv'))
-    csvdata_test = loadCSV(os.path.join(path_indices, 'test' + '_indice.csv'))
-    # csvdata_all = csvdata_train | csvdata_test
-
-    print("Loading csv file and indices complete")
-    path_test = load_name(csvdata_test)
-    path_train = load_name(csvdata_train)
-    # path_all = path_test | path_train
-
-    data_all = pd.DataFrame()  # 4 columns: 'File Name', 'Data', 'Mode', 'Class', 'Label'
-    for i in range(len(list(path_test.keys()))):
-        # for i in range(5):
-        df = load_data_to_df(path_data, list(path_test.keys()), path_test, 'test', i)
-        data_all = pd.concat([data_all, df], ignore_index=True)
-
-    for i in range(len(list(path_train.keys()))):
-        # for i in range(5):
-        df = load_data_to_df(path_data, list(path_train.keys()), path_train, 'train', i)
-        data_all = pd.concat([data_all, df], ignore_index=True)
-
-    print("loading data complete")
-
-    '''
-       for all given data:
-           total 30213
-           0    15987
-           1    14226
-           train    24588
-           test      5625
-       for all train data:
-           0    12751
-           1    11837
-       for all test data:
-           0    3236
-           1    2389
-       '''
-
-    # print(data_all['Mode'].value_counts())
-    # print((data_all.loc[data_all['Mode'] == 'train'])['Label'].value_counts(ascending=True))
-    # print((data_all.loc[data_all['Mode'] == 'test'])['Label'].value_counts(ascending=True))
-
+def log_reg(data_all):
+    """
+    Build logistic regression model
+    :param data_all: data in dataframe
+    :return: model
+    """
     X_train = np.array([data for data in data_all.loc[data_all['Mode'] == 'train']['Data']])
     y_train = data_all.loc[data_all['Mode'] == 'train']['Class'].to_numpy(dtype=float)
     print(X_train.shape)
@@ -168,6 +124,59 @@ def main():
     stats_file.write('segments: TP, FN, FP, TN\n')
     output_segs = stats_report([segs_TP, segs_FN, segs_FP, segs_TN])
     stats_file.write(output_segs + '\n')
+
+    return model
+
+
+def main():
+    # Hyperparameters
+    SIZE = args.size  # data point number per data
+    path_data = args.path_data
+    path_indices = args.path_indices
+    # names_list = []
+    names_dict = {}
+
+    # loading data files from test_indics.csv and train_indice.csv
+    csvdata_train = loadCSV(os.path.join(path_indices, 'train' + '_indice.csv'))
+    csvdata_test = loadCSV(os.path.join(path_indices, 'test' + '_indice.csv'))
+    # csvdata_all = csvdata_train | csvdata_test
+
+    print("Loading csv file and indices complete")
+    path_test = load_name(csvdata_test)
+    path_train = load_name(csvdata_train)
+    # path_all = path_test | path_train
+
+    data_all = pd.DataFrame()  # 5 columns: 'File Name', 'Data', 'Mode', 'Class', 'Label'
+    for i in range(len(list(path_test.keys()))):
+        # for i in range(5):
+        df = load_data_to_df(path_data, list(path_test.keys()), path_test, 'test', i)
+        data_all = pd.concat([data_all, df], ignore_index=True)
+
+    for i in range(len(list(path_train.keys()))):
+        # for i in range(5):
+        df = load_data_to_df(path_data, list(path_train.keys()), path_train, 'train', i)
+        data_all = pd.concat([data_all, df], ignore_index=True)
+
+    print("loading data complete")
+
+    '''
+       for all given data:
+           total 30213
+           0    15987
+           1    14226
+           train    24588
+           test      5625
+       for all train data:
+           0    12751
+           1    11837
+       for all test data:
+           0    3236
+           1    2389
+       '''
+
+    # print(data_all['Mode'].value_counts())
+    # print((data_all.loc[data_all['Mode'] == 'train'])['Label'].value_counts(ascending=True))
+    # print((data_all.loc[data_all['Mode'] == 'test'])['Label'].value_counts(ascending=True))
 
     # t = np.arange(0,SIZE,1)
     # y_time = data_1['IEGM_seg'].squeeze()

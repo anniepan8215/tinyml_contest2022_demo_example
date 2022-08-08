@@ -17,7 +17,7 @@ class CNNLSTM(nn.Module):
         super(CNNLSTM, self).__init__()
         self.feature = 32
         self.padding = nn.ReplicationPad2d((31, 32, 0, 0))
-        self.conv = nn.Conv2d(1, self.feature, (1, 64))  # ,padding=(0,32),padding_mode='replicate')
+        self.conv = nn.Conv2d(1, self.feature, (1, 64))
         self.batch = Batchlayer(self.feature)
         self.avgpool = nn.AvgPool2d((1, 8))
         self.fc = nn.Linear(32, 2)
