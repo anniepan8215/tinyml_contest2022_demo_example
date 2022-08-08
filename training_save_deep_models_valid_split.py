@@ -109,27 +109,28 @@ def main():
 
         if epoch % validation_step == 0:
             net.eval()
-            for data_valid in validloader:
-                IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
-                IEGM_valid = IEGM_valid.float().to(device)
-                labels_valid = labels_valid.to(device)
-                outputs_valid = net(IEGM_valid)
-                _, predicted_valid = torch.max(outputs_valid.data, 1)
-                total += labels_valid.size(0)
-                correct += (predicted_valid == labels_valid).sum()
+            with torch.no_grad():
+                for data_valid in validloader:
+                    IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
+                    IEGM_valid = IEGM_valid.float().to(device)
+                    labels_valid = labels_valid.to(device)
+                    outputs_valid = net(IEGM_valid)
+                    _, predicted_valid = torch.max(outputs_valid.data, 1)
+                    total += labels_valid.size(0)
+                    correct += (predicted_valid == labels_valid).sum()
 
-                loss_valid = criterion(outputs_valid, labels_valid)
-                running_loss_valid += loss_valid.item()
-                i += 1
+                    loss_valid = criterion(outputs_valid, labels_valid)
+                    running_loss_valid += loss_valid.item()
+                    i += 1
 
-            print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
+                print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
 
-            Valid_loss.append(running_loss_valid / i)
-            Valid_acc.append((correct / total).item())
-            if min_valid_loss > running_loss_valid / i:
-                min_valid_loss = running_loss_valid / i
-                torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
-                torch.save(net.state_dict(), './saved_models/IEGM_net_fft_valid_split.pkl')
+                Valid_loss.append(running_loss_valid / i)
+                Valid_acc.append((correct / total).item())
+                if min_valid_loss > running_loss_valid / i:
+                    min_valid_loss = running_loss_valid / i
+                    torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
+                    torch.save(net.state_dict(), './saved_models/IEGM_net_fft_valid_split.pkl')
 
         # running_loss = 0.0
         # accuracy = 0.0
