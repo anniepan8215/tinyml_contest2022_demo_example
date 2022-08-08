@@ -11,7 +11,6 @@ from help_code_demo import ToTensor, IEGM_DataSET
 from models.model_1 import IEGMNet
 
 
-
 def main():
     # Hyperparameters
     BATCH_SIZE = args.batchsz
@@ -163,6 +162,7 @@ def main():
 
     stop = time.time()
     total_time = stop - start
+    print("Total training time:" + str(total_time) + 's')
 
     file = open('./saved_models/loss_acc_valid_split.txt', 'w')
     file.write("Train_loss\n")

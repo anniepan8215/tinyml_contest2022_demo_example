@@ -167,6 +167,7 @@ def main():
 
     stop = time.time()
     total_time = stop-start
+    print("Total training time:" + str(total_time) + 's')
 
     file = open('./saved_models/loss_acc_fft.txt', 'w')
     file.write("Train_loss\n")
