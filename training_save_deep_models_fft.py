@@ -45,13 +45,13 @@ def main():
 
     # trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 
-    testset = IEGM_DataSET(root_dir=path_data,
-                           indice_dir=path_indices,
-                           mode='test',
-                           size=SIZE,
-                           transform=transforms.Compose([ToTensor()]))
-
-    testloader = DataLoader(testset, batch_size=BATCH_SIZE_TEST, shuffle=True, num_workers=0)
+    # testset = IEGM_DataSET(root_dir=path_data,
+    #                        indice_dir=path_indices,
+    #                        mode='test',
+    #                        size=SIZE,
+    #                        transform=transforms.Compose([ToTensor()]))
+    #
+    # testloader = DataLoader(testset, batch_size=BATCH_SIZE_TEST, shuffle=True, num_workers=0)
 
     print("Training Dataset loading finish.")
 
@@ -70,8 +70,8 @@ def main():
     Train_acc = []
     valid_loss = []
     valid_acc = []
-    Test_loss = []
-    Test_acc = []
+    # Test_loss = []
+    # Test_acc = []
     min_valid_loss = np.inf
 
     print("Start training")
