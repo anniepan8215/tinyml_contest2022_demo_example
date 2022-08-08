@@ -7,7 +7,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
-from help_code_demo import ToTensor, IEGM_DataSET
+from help_code_demo import ToTensor, IEGM_DataSET, plot_against_epoch_numbers
 from models.model_1 import IEGMNet
 
 
@@ -180,6 +180,10 @@ def main():
     file.write("Total training time\n")
     file.write(str(total_time))
     file.write('\n\n')
+    plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_loss, validation_epoch_and_value_pairs=Valid_loss,
+                               train_label='training loss', val_label='validation loss', title='Loss Plot')
+    plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_acc, validation_epoch_and_value_pairs=Valid_acc,
+                               train_label='training accuracy', val_label='validation accuracy', title='Accuracy Plot')
 
     print('Finish training')
 

@@ -60,8 +60,8 @@ def main():
 
     Train_loss = []
     Train_acc = []
-    valid_loss = []
-    valid_acc = []
+    Valid_loss = []
+    Valid_acc = []
     # Test_loss = []
     # Test_acc = []
     min_valid_loss = np.inf
@@ -130,8 +130,8 @@ def main():
 
                 print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
 
-                valid_loss.append(running_loss_valid / i)
-                valid_acc.append((correct / total).item())
+                Valid_loss.append(running_loss_valid / i)
+                Valid_acc.append((correct / total).item())
                 if min_valid_loss > running_loss_valid / i:
                     min_valid_loss = running_loss_valid / i
                     torch.save(net, './saved_models/IEGM_net_fft.pkl')
@@ -185,6 +185,11 @@ def main():
     file.write("Total training time\n")
     file.write(str(total_time))
     file.write('\n\n')
+
+    plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_loss, validation_epoch_and_value_pairs=Valid_loss,
+                               train_label='training loss', val_label='validation loss', title='Loss Plot')
+    plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_acc, validation_epoch_and_value_pairs=Valid_acc,
+                               train_label='training accuracy', val_label='validation accuracy', title='Accuracy Plot')
 
     print('Finish training')
 
