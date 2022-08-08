@@ -223,7 +223,7 @@ if __name__ == '__main__':
     argparser.add_argument('--path_data', type=str, default='./data/')
     argparser.add_argument('--path_indices', type=str, default='./data_indices')
     argparser.add_argument('--path_validsz', type=float, help='split ratio', default=0.2)
-    argparser.add_argument('--valid_step', type=int, help='number of epoch for evaluation', default=5)
+    argparser.add_argument('--valid_step', type=int, help='number of epoch for evaluation', default=1)
 
     args = argparser.parse_args()
 
