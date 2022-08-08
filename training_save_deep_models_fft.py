@@ -129,8 +129,8 @@ def main():
         print('[Epoch, Batches] is [%d, %5d] \nTrain Acc: %.5f Train loss: %.5f' %
               (epoch + 1, i, accuracy / i, running_loss / i))
 
-        Train_loss.append([epoch (running_loss / i)])
-        Train_acc.append([epoch (accuracy / i).item()])
+        Train_loss.append([epoch, (running_loss / i)])
+        Train_acc.append([epoch, (accuracy / i).item()])
 
         # running_loss = 0.0
         # accuracy = 0.0
@@ -158,8 +158,8 @@ def main():
 
             print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
             validation_loss = running_loss_valid / i
-            valid_loss.append([epoch running_loss_valid / i])
-            valid_acc.append([epoch (correct / total).item()])
+            valid_loss.append([epoch, running_loss_valid / i])
+            valid_acc.append([epoch, (correct / total).item()])
 
         # running_loss = 0.0
         # accuracy = 0.0
