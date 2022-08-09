@@ -4,11 +4,49 @@ import time
 import numpy as np
 import torch
 import torchvision.transforms as transforms
+from torch import long
 from torch.utils.data import DataLoader
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from help_code_demo import ToTensor, IEGM_DataSET, plot_against_epoch_numbers
 from models.model_1 import IEGMNet
+
+from torch.autograd import Variable
+
+
+class FocalLoss(nn.Module):
+    def __init__(self, gamma=0, alpha=None, size_average=True):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+        if isinstance(alpha, (float, int)): self.alpha = torch.Tensor([alpha, 1 - alpha])
+        if isinstance(alpha, list): self.alpha = torch.Tensor(alpha)
+        self.size_average = size_average
+
+    def forward(self, input, target):
+        if input.dim() > 2:
+            input = input.view(input.size(0), input.size(1), -1)  # N,C,H,W => N,C,H*W
+            input = input.transpose(1, 2)  # N,C,H*W => N,H*W,C
+            input = input.contiguous().view(-1, input.size(2))  # N,H*W,C => N*H*W,C
+        target = target.view(-1, 1)
+
+        logpt = F.log_softmax(input)
+        logpt = logpt.gather(1, target)
+        logpt = logpt.view(-1)
+        pt = Variable(logpt.data.exp())
+
+        if self.alpha is not None:
+            if self.alpha.type() != input.data.type():
+                self.alpha = self.alpha.type_as(input.data)
+            at = self.alpha.gather(0, target.data.view(-1))
+            logpt = logpt * Variable(at)
+
+        loss = -1 * (1 - pt) ** self.gamma * logpt
+        if self.size_average:
+            return loss.mean()
+        else:
+            return loss.sum()
 
 
 def main():
@@ -55,7 +93,8 @@ def main():
 
     print("Training Dataset loading finish.")
 
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = FocalLoss()
     optimizer = optim.Adam(net.parameters(), lr=LR)
     epoch_num = EPOCH
 
@@ -131,7 +170,7 @@ def main():
                 if min_valid_loss > running_loss_valid / i:
                     min_valid_loss = running_loss_valid / i
                     torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
-                    torch.save(net.state_dict(), './saved_models/IEGM_net_fft_valid_split.pkl')
+                    torch.save(net.state_dict(), './saved_models/IEGM_net_valid_split.pkl')
 
         # running_loss = 0.0
         # accuracy = 0.0
@@ -180,10 +219,10 @@ def main():
     file.write("Total training time\n")
     file.write(str(total_time))
     file.write('\n\n')
-    plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_loss, validation_epoch_and_value_pairs=Valid_loss,
-                               train_label='training loss', val_label='validation loss', title='Loss Plot')
-    plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_acc, validation_epoch_and_value_pairs=Valid_acc,
-                               train_label='training accuracy', val_label='validation accuracy', title='Accuracy Plot')
+    # plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_loss, validation_epoch_and_value_pairs=Valid_loss,
+    #                            train_label='training loss', val_label='validation loss', title='Loss Plot')
+    # plot_against_epoch_numbers(train_epoch_and_value_pairs=Train_acc, validation_epoch_and_value_pairs=Valid_acc,
+    #                            train_label='training accuracy', val_label='validation accuracy', title='Accuracy Plot')
 
     print('Finish training')
 
