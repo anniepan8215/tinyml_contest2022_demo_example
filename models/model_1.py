@@ -42,6 +42,7 @@ class IEGMNet(nn.Module):
             nn.Linear(in_features=10, out_features=2)
         )
 
+
     def forward(self, input):
 
         conv1_output = self.conv1(input)

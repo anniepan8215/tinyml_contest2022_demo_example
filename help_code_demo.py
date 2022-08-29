@@ -1,6 +1,7 @@
 import csv, torch, os
 import numpy as np
 from matplotlib import pyplot as plt
+import scipy.signal as sg
 
 
 def ACC(mylist):
@@ -211,7 +212,8 @@ def fft_transfer(ys_time, SIZE=1250):
     return torch.tensor(np.array(ys_freq).reshape((-1, 1, SIZE, 1)))
 
 
-def plot_against_epoch_numbers(train_epoch_and_value_pairs, validation_epoch_and_value_pairs=None, train_label=None, val_label=None, title=None, result_reg_path='./records/'):
+def plot_against_epoch_numbers(train_epoch_and_value_pairs, validation_epoch_and_value_pairs=None, train_label=None,
+                               val_label=None, title=None, result_reg_path='./records/'):
     """
     Helper to reduce code duplication when plotting quantities that vary over training epochs
     epoch_and_value_pairs: An array_like consisting of pairs of the form (<epoch number>, <value of thing to plot>)
@@ -236,4 +238,14 @@ def plot_against_epoch_numbers(train_epoch_and_value_pairs, validation_epoch_and
         plt.plot(val_array[:, 0], val_array[:, 1], label=val_label)
         plt.xlabel("epochs")
         plt.title(title)
-    plt.savefig(os.path.join(result_reg_path, title+'.png'))
+    plt.savefig(os.path.join(result_reg_path, title + '.png'))
+
+
+def get_local_max(x):
+    """
+    Finding indexes for all local maxima
+    :param x: data with 1*1250
+    :return: index list
+    """
+    idxs = sg.argrelmax(x)
+    return idxs

@@ -10,10 +10,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from help_code_demo import ToTensor, IEGM_DataSET, plot_against_epoch_numbers
-from models.model_1 import IEGMNet
+from models.model_1_1 import IEGMNet_NiN
 
 from torch.autograd import Variable
-torch.manual_seed(0)
+
 
 class FocalLoss(nn.Module):
     def __init__(self, gamma=0, alpha=None, size_average=True):
@@ -62,7 +62,7 @@ def main():
     validation_step = args.valid_step
 
     # Instantiating NN
-    net = IEGMNet()
+    net = IEGMNet_NiN()
     net.train()
     net = net.float().to(device)
 
@@ -169,8 +169,8 @@ def main():
                 Valid_acc.append((correct / total).item())
                 if min_valid_loss > running_loss_valid / i:
                     min_valid_loss = running_loss_valid / i
-                    torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
-                    torch.save(net.state_dict(), './saved_models/IEGM_net_valid_split.pkl')
+                    torch.save(net, './saved_models/IEGM_net_valid_split_NiN.pkl')
+                    torch.save(net.state_dict(), './saved_models/IEGM_net_valid_split_NiN.pkl')
 
         # running_loss = 0.0
         # accuracy = 0.0
@@ -203,7 +203,7 @@ def main():
     total_time = stop - start
     print("Total training time:" + str(total_time) + 's')
 
-    file = open('./saved_models/loss_acc_valid_split.txt', 'w')
+    file = open('./saved_models/loss_acc_valid_split_NiN.txt', 'w')
     file.write("Train_loss\n")
     file.write(str(Train_loss))
     file.write('\n\n')
