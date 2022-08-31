@@ -191,6 +191,38 @@ class IEGM_DataSET():
         return sample
 
 
+class IEGM_DataSET_fft():
+    def __init__(self, root_dir, indice_dir, mode, size, transform=None):
+        self.root_dir = root_dir  # argparser.add_argument('--path_data', type=str, default=...)
+        self.indice_dir = indice_dir
+        self.size = size
+        self.names_list = []
+        self.transform = transform
+
+        csvdata_all = loadCSV(os.path.join(self.indice_dir, mode + '_indice.csv'))
+
+        for i, (k, v) in enumerate(csvdata_all.items()):
+            self.names_list.append(str(k) + ' ' + str(v[0]))
+
+    def __len__(self):
+        return len(self.names_list)
+
+    def __getitem__(self, idx):
+        text_path = self.root_dir + self.names_list[idx].split(' ')[0]
+
+        if not os.path.isfile(text_path):
+            print(text_path + 'does not exist')
+            return None
+
+        IEGM_seg = txt_to_numpy(text_path, self.size).reshape(1, self.size, 1)
+        IEGM_fft = fft_transfer(IEGM_seg)
+        data = np.concatenate((IEGM_seg, IEGM_fft), axis=0)
+        label = int(self.names_list[idx].split(' ')[1])
+        sample = {'IEGM_seg': data, 'label': label}
+
+        return sample
+
+
 def pytorch2onnx(net_path, net_name, size):
     net = torch.load(net_path, map_location=torch.device('cpu'))
 
@@ -201,15 +233,16 @@ def pytorch2onnx(net_path, net_name, size):
 
 
 def fft_transfer(ys_time, SIZE=1250):
-    ys_freq = []
+    # ys_freq = np.zeros(ys_time.shape[0])
     ys_time = ys_time.squeeze()
-    if len(list(ys_time.size())) == 1:
-        ys_freq.append(np.fft.fft(ys_time))
-    else:
-        for i in range(ys_time.size(dim=0)):
-            y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
-            ys_freq.append(y_freq)
-    return torch.tensor(np.array(ys_freq).reshape((-1, 1, SIZE, 1)))
+    # print(ys_time.shape[0])
+    # if len(list(ys_time.size())) == 1:
+    ys_freq = np.fft.fft(ys_time)
+    # else:
+    #     for i in range(ys_time.size(dim=0)):
+    #         y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
+    #         ys_freq.append(y_freq)
+    return ys_freq.reshape((1, SIZE, 1))
 
 
 def plot_against_epoch_numbers(train_epoch_and_value_pairs, validation_epoch_and_value_pairs=None, train_label=None,

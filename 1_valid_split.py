@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from help_code_demo import ToTensor, IEGM_DataSET, plot_against_epoch_numbers
+from help_code_demo import ToTensor, IEGM_DataSET_fft, plot_against_epoch_numbers
 from models.model_1_1 import IEGMNet_NiN
 
 from torch.autograd import Variable
@@ -67,7 +67,7 @@ def main():
     net = net.float().to(device)
 
     # Start dataset loading
-    trainset = IEGM_DataSET(root_dir=path_data,
+    trainset = IEGM_DataSET_fft(root_dir=path_data,
                             indice_dir=path_indices,
                             mode='train',
                             size=SIZE,
@@ -170,7 +170,7 @@ def main():
                 if min_valid_loss > running_loss_valid / i:
                     min_valid_loss = running_loss_valid / i
                     torch.save(net, './saved_models/IEGM_net_valid_split_NiN.pkl')
-                    torch.save(net.state_dict(), './saved_models/IEGM_net_valid_split_NiN.pkl')
+                    torch.save(net.state_dict(), './saved_models/IEGM_net_valid_split_NiN_state_dict.pkl')
 
         # running_loss = 0.0
         # accuracy = 0.0

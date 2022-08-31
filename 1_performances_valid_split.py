@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from copy import deepcopy
 import torchvision.transforms as transforms
 
-from help_code_demo import ToTensor, IEGM_DataSET, stats_report
+from help_code_demo import ToTensor, IEGM_DataSET_fft, stats_report
 
 
 def main():
@@ -23,15 +23,15 @@ def main():
     path_records = args.path_record
     path_net = args.path_net
     path_indices = args.path_indices
-    stats_file = open(path_records + 'seg_stat_valid_split.txt', 'w')
+    stats_file = open(path_records + 'seg_stat_valid_split_NiN.txt', 'w')
 
     # load trained network
-    net = torch.load(path_net + 'IEGM_net_valid_split.pkl', map_location='cuda:0')
+    net = torch.load(path_net + 'IEGM_net_valid_split_NiN.pkl', map_location='cuda:0')
     net.eval()
     net.cuda()
     device = torch.device('cuda:0')
 
-    testset = IEGM_DataSET(root_dir=path_data,
+    testset = IEGM_DataSET_fft(root_dir=path_data,
                            indice_dir=path_indices,
                            mode='test',
                            size=SIZE,
@@ -43,6 +43,7 @@ def main():
     segs_TN = 0
     segs_FP = 0
     segs_FN = 0
+
 
     for data_test in testloader:
         IEGM_test, labels_test = data_test['IEGM_seg'], data_test['label']
