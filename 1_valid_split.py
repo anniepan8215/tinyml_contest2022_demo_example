@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from help_code_demo import ToTensor, IEGM_DataSET_fft, plot_against_epoch_numbers
-from models.model_1_1 import IEGMNet_NiN
+from models.model_1_1 import IEGMNet_FFT
 
 from torch.autograd import Variable
 
@@ -51,6 +51,8 @@ class FocalLoss(nn.Module):
 
 def main():
     # Hyperparameters
+    seed = 222
+    torch.manual_seed(seed)
     BATCH_SIZE = args.batchsz
     BATCH_SIZE_TEST = args.batchsz
     LR = args.lr
@@ -62,16 +64,16 @@ def main():
     validation_step = args.valid_step
 
     # Instantiating NN
-    net = IEGMNet_NiN()
+    net = IEGMNet_FFT()
     net.train()
     net = net.float().to(device)
 
     # Start dataset loading
     trainset = IEGM_DataSET_fft(root_dir=path_data,
-                            indice_dir=path_indices,
-                            mode='train',
-                            size=SIZE,
-                            transform=transforms.Compose([ToTensor()]))
+                                indice_dir=path_indices,
+                                mode='train',
+                                size=SIZE,
+                                transform=transforms.Compose([ToTensor()]))
 
     # trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
 
@@ -225,11 +227,12 @@ def main():
     #                            train_label='training accuracy', val_label='validation accuracy', title='Accuracy Plot')
 
     print('Finish training')
+    torch.cuda.empty_cache()
 
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--epoch', type=int, help='epoch number', default=2)
+    argparser.add_argument('--epoch', type=int, help='epoch number', default=20)
     argparser.add_argument('--lr', type=float, help='learning rate', default=0.0001)
     argparser.add_argument('--batchsz', type=int, help='total batchsz for traindb', default=32)
     argparser.add_argument('--cuda', type=int, default=0)
