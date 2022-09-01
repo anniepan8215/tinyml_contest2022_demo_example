@@ -88,6 +88,6 @@ class IEGMNet_FFT(nn.Module):
         conv5_output = conv5_output.view(-1, 40*37*1)
 
         fc1_output = F.relu(self.fc1(conv5_output))
-        output = self.fc2(fc1_output)
+        output = F.softmax(self.fc2(fc1_output))
         # output = self.global_avg(conv4_output)
         return output

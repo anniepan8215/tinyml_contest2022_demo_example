@@ -54,6 +54,7 @@ def main():
     BATCH_SIZE = args.batchsz
     BATCH_SIZE_TEST = args.batchsz
     LR = args.lr
+    TH = args.th
     EPOCH = args.epoch
     SIZE = args.size
     path_data = args.path_data
@@ -125,7 +126,7 @@ def main():
             loss.backward()
             optimizer.step()
 
-            _, predicted = torch.max(outputs.data, 1)
+            predicted = (outputs.data[:,1] > TH).float()
             correct += (predicted == labels).sum()
             accuracy += correct / BATCH_SIZE
             correct = 0.0
@@ -155,7 +156,7 @@ def main():
                     IEGM_valid = IEGM_valid.float().to(device)
                     labels_valid = labels_valid.to(device)
                     outputs_valid = net(IEGM_valid)
-                    _, predicted_valid = torch.max(outputs_valid.data, 1)
+                    predicted_valid = (outputs_valid.data[:,1] > TH).float()
                     total += labels_valid.size(0)
                     correct += (predicted_valid == labels_valid).sum()
 
@@ -231,6 +232,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--epoch', type=int, help='epoch number', default=2)
     argparser.add_argument('--lr', type=float, help='learning rate', default=0.0001)
+    argparser.add_argument('--th', type=float, help='threshold for label smoothing', default=0.5)
     argparser.add_argument('--batchsz', type=int, help='total batchsz for traindb', default=32)
     argparser.add_argument('--cuda', type=int, default=0)
     argparser.add_argument('--size', type=int, default=1250)

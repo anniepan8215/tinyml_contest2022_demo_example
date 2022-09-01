@@ -19,6 +19,7 @@ def main():
     # Hyperparameters
     BATCH_SIZE_TEST = 1
     SIZE = args.size
+    TH = args.th
     path_data = args.path_data
     path_records = args.path_record
     path_net = args.path_net
@@ -53,7 +54,7 @@ def main():
         labels_test = labels_test.to(device)
 
         outputs_test = net(IEGM_test)
-        _, predicted_test = torch.max(outputs_test.data, 1)
+        predicted_test = (outputs_test.data[:,1] > TH).float()
 
         if seg_label == 0:
             segs_FP += (labels_test.size(0) - (predicted_test == labels_test).sum()).item()
@@ -74,6 +75,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--cuda', type=int, default=0)
     argparser.add_argument('--size', type=int, default=1250)
+    argparser.add_argument('--th', type=float, help='threshold for label smoothing', default=0.5)
     # argparser.add_argument('--path_data', type=str, default='H:/Date_Experiment/data_IEGMdb_ICCAD_Contest/segments-R250'
     #                                                         '-BPF15_55-Noise/tinyml_contest_data_training/')
     argparser.add_argument('--path_data', type=str, default='./data/')

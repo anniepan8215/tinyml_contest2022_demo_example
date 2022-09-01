@@ -1,15 +1,17 @@
 import argparse
 import time
+from copy import deepcopy
 
 import numpy as np
 import torch
 import torchvision.transforms as transforms
+from matplotlib import pyplot as plt
 from torch import long
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from help_code_demo import ToTensor, IEGM_DataSET_fft, plot_against_epoch_numbers
+from help_code_demo import ToTensor, IEGM_DataSET_fft, plot_against_epoch_numbers, stats_report, FB
 from models.model_1_1 import IEGMNet_FFT
 
 from torch.autograd import Variable
@@ -56,6 +58,7 @@ def main():
     BATCH_SIZE = args.batchsz
     BATCH_SIZE_TEST = args.batchsz
     LR = args.lr
+    TH = args.th
     EPOCH = args.epoch
     SIZE = args.size
     path_data = args.path_data
@@ -75,16 +78,6 @@ def main():
                                 size=SIZE,
                                 transform=transforms.Compose([ToTensor()]))
 
-    # trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
-
-    # testset = IEGM_DataSET(root_dir=path_data,
-    #                        indice_dir=path_indices,
-    #                        mode='test',
-    #                        size=SIZE,
-    #                        transform=transforms.Compose([ToTensor()]))
-    #
-    # testloader = DataLoader(testset, batch_size=BATCH_SIZE_TEST, shuffle=True, num_workers=0)
-
     valid_size = int(validation_split * len(trainset))
     train_size = len(trainset) - valid_size
 
@@ -95,6 +88,17 @@ def main():
 
     print("Training Dataset loading finish.")
 
+    # Initialize Plot loss and acc
+    epochs = []
+    losses = []
+    accs = []
+    FBs = []
+    plt.ion()
+    plt.rcParams['figure.figsize'] = (10, 10)  # 图像显示大小
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # 防止中文标签乱码，还有通过导入字体文件的方法
+    plt.rcParams['axes.unicode_minus'] = False
+    plt.rcParams['lines.linewidth'] = 0.5  # 设置曲线线条宽度
+
     # criterion = nn.CrossEntropyLoss()
     criterion = FocalLoss()
     optimizer = optim.Adam(net.parameters(), lr=LR)
@@ -104,6 +108,7 @@ def main():
     Train_acc = []
     # Test_loss = []
     # Test_acc = []
+    FB_scores = []
     Valid_loss = []
     Valid_acc = []
     min_valid_loss = np.inf
@@ -127,7 +132,7 @@ def main():
             loss.backward()
             optimizer.step()
 
-            _, predicted = torch.max(outputs.data, 1)
+            predicted = (outputs.data[:, 1] > TH).float()
             correct += (predicted == labels).sum()
             accuracy += correct / BATCH_SIZE
             correct = 0.0
@@ -151,56 +156,70 @@ def main():
 
         if epoch % validation_step == 0:
             net.eval()
+            segs_TP = 0
+            segs_TN = 0
+            segs_FP = 0
+            segs_FN = 0
             with torch.no_grad():
                 for data_valid in validloader:
                     IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
                     IEGM_valid = IEGM_valid.float().to(device)
                     labels_valid = labels_valid.to(device)
                     outputs_valid = net(IEGM_valid)
-                    _, predicted_valid = torch.max(outputs_valid.data, 1)
+                    predicted_valid = (outputs_valid.data[:, 1] > TH).float()
                     total += labels_valid.size(0)
                     correct += (predicted_valid == labels_valid).sum()
+
+                    seg_labels = deepcopy(labels_valid)
+                    for seg_label in seg_labels:
+                        if seg_label == 0:
+                            segs_FP += (labels_valid.size(0) - (predicted_valid == labels_valid).sum()).item()
+                            segs_TN += (predicted_valid == labels_valid).sum().item()
+                        elif seg_label == 1:
+                            segs_FN += (labels_valid.size(0) - (predicted_valid == labels_valid).sum()).item()
+                            segs_TP += (predicted_valid == labels_valid).sum().item()
+
 
                     loss_valid = criterion(outputs_valid, labels_valid)
                     running_loss_valid += loss_valid.item()
                     i += 1
 
+                # report metrics
                 print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
+                FB_score = FB([segs_TP, segs_FN, segs_FP, segs_TN])
+                print('FB score: %.5f' % (FB_score))
 
                 Valid_loss.append(running_loss_valid / i)
                 Valid_acc.append((correct / total).item())
+                FB_scores.append(FB_score)
                 if min_valid_loss > running_loss_valid / i:
                     min_valid_loss = running_loss_valid / i
                     torch.save(net, './saved_models/IEGM_net_valid_split_NiN.pkl')
                     torch.save(net.state_dict(), './saved_models/IEGM_net_valid_split_NiN_state_dict.pkl')
 
-        # running_loss = 0.0
-        # accuracy = 0.0
-        #
-        # correct = 0.0
-        # total = 0.0
-        # i = 0.0
-        # running_loss_test = 0.0
-        #
-        # for data_test in testloader:
-        #     net.eval()
-        #     IEGM_test, labels_test = data_test['IEGM_seg'], data_test['label']
-        #     IEGM_test = IEGM_test.float().to(device)
-        #     labels_test = labels_test.to(device)
-        #     outputs_test = net(IEGM_test)
-        #     _, predicted_test = torch.max(outputs_test.data, 1)
-        #     total += labels_test.size(0)
-        #     correct += (predicted_test == labels_test).sum()
-        #
-        #     loss_test = criterion(outputs_test, labels_test)
-        #     running_loss_test += loss_test.item()
-        #     i += 1
-        #
-        # print('Test Acc: %.5f Test Loss: %.5f' % (correct / total, running_loss_test / i))
-        #
-        # Test_loss.append(running_loss_test / i)
-        # Test_acc.append((correct / total).item())
+        # Plot loss and acc
+        plt.clf()
+        epochs.append(epoch)
+        # Figure 1
+        agraphic = plt.subplot(2, 1, 1)
+        # agraphic.set_title('loss')  # 添加子标题
+        agraphic.set_xlabel('Epoch', fontsize=10)  # 添加轴标签
+        agraphic.set_ylabel('loss', fontsize=20)
+        agraphic.plot(epochs, Train_loss, 'g-', label='Train')
+        agraphic.plot(epochs, Valid_loss, 'r-', label='Valid')
+        agraphic.legend()
+        # Figure 2
+        bgraphic = plt.subplot(2, 1, 2)
+        bgraphic.set_title('Acc')
+        bgraphic.plot(epochs, Train_acc, 'g-', label='Train')
+        bgraphic.plot(epochs, Valid_acc, 'r-', label='Valid')
+        bgraphic.plot(epochs, FB_scores, 'b-', label='FBeta')
+        bgraphic.legend()
 
+        plt.pause(0.4)
+
+    plt.ioff()
+    plt.show()
     stop = time.time()
     total_time = stop - start
     print("Total training time:" + str(total_time) + 's')
@@ -234,6 +253,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--epoch', type=int, help='epoch number', default=20)
     argparser.add_argument('--lr', type=float, help='learning rate', default=0.0001)
+    argparser.add_argument('--th', type=float, help='threshold for label smoothing', default=0.6)
     argparser.add_argument('--batchsz', type=int, help='total batchsz for traindb', default=32)
     argparser.add_argument('--cuda', type=int, default=0)
     argparser.add_argument('--size', type=int, default=1250)

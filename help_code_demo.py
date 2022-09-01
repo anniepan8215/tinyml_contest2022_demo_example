@@ -117,6 +117,20 @@ def stats_report(mylist):
     return output
 
 
+def stats(mylist):
+    # segs_TP, segs_FN, segs_FP, segs_TN
+    f1 = round(F1(mylist), 5)
+    fb = round(FB(mylist), 5)
+    se = round(Sensitivity(mylist), 5)
+    sp = round(Specificity(mylist), 5)
+    bac = round(BAC(mylist), 5)
+    acc = round(ACC(mylist), 5)
+    ppv = round(PPV(mylist), 5)
+    npv = round(NPV(mylist), 5)
+
+    return [ACC(mylist),FB(mylist),F1(mylist),Sensitivity(mylist),Specificity(mylist),BAC(mylist),PPV(mylist),NPV(mylist)]
+
+
 def loadCSV(csvf):
     """
     return a dict saving the information of csv
