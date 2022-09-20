@@ -238,7 +238,7 @@ def main():
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--epoch', type=int, help='epoch number', default=20)
+    argparser.add_argument('--epoch', type=int, help='epoch number', default=1)
     argparser.add_argument('--lr', type=float, help='learning rate', default=0.001)
     argparser.add_argument('--th', type=float, help='threshold for label smoothing', default=0.6)
     argparser.add_argument('--batchsz', type=int, help='total batchsz for traindb', default=32)

@@ -11,7 +11,7 @@ import time
 
 def fft_transfer(ys_time, SIZE=1250):
     ys_freq = np.zeros((ys_time.shape[0],SIZE))
-    ys_time = ys_time.squeeze()
+    ys_time = ys_time.reshape(ys_time.shape[0],-1)
     if len(list(ys_time.size())) == 1:
         ys_freq = np.fft.fft(ys_time)
     else:

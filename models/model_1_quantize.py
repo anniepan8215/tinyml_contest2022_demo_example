@@ -7,12 +7,9 @@ class ConvReLUBN(nn.Sequential):
     def __init__(self, in_planes, out_planes, kernel_size, stride, groups=1):
         super(ConvReLUBN, self).__init__(
             nn.Conv2d(in_planes, out_planes, kernel_size, stride, 0, groups=groups, bias=False),
-            nn.ReLU(True),
-            nn.BatchNorm2d(out_planes, affine=True, track_running_stats=True, eps=1e-5, momentum=0.1)
+            nn.BatchNorm2d(out_planes, affine=True, track_running_stats=True, eps=1e-5, momentum=0.1),
+            nn.ReLU(True)
         )
-
-
-
 
 
 class IEGMNet_FFT(nn.Module):
@@ -20,7 +17,7 @@ class IEGMNet_FFT(nn.Module):
     def fuse_model(self):
         for m in self.modules():
             if type(m) == ConvReLUBN:
-                torch.ao.quantization.fuse_modules(m, ['0', '1', '2'], inplace=True)
+                torch.quantization.fuse_modules(m, [['0', '1', '2']], inplace=True)
 
     def __init__(self):
         super(IEGMNet_FFT, self).__init__()
@@ -49,10 +46,8 @@ class IEGMNet_FFT(nn.Module):
         conv3_output = self.conv3(conv2_output)
         conv4_output = self.conv4(conv3_output)
         conv5_output = self.conv5(conv4_output)
-        conv5_output = conv5_output.view(-1, 40 * 37 * 1)
-
+        conv5_output = conv5_output.reshape(-1, 40 * 37 * 1)
         fc1_output = F.relu(self.fc1(conv5_output))
         output = F.softmax(self.fc2(fc1_output))
-        output_dequant = self.dequant(output)
-        # output = self.global_avg(conv4_output)
-        return output_dequant
+        output = self.dequant(output)
+        return output
