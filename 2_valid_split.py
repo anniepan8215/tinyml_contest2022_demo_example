@@ -1,7 +1,7 @@
-import os
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import argparse
 import time
+from copy import deepcopy
+
 import numpy as np
 import torch
 import torchvision.transforms as transforms
@@ -9,11 +9,10 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from help_code_demo import ToTensor, IEGM_DataSET, FB
-from models.model_1 import IEGMNet
+from help_code_demo import ToTensor, FB, IEGM_DataSET
+from models.model_1_quantize import IEGMNet_FFT
+
 from torch.autograd import Variable
-import matplotlib.pyplot as plt
-from copy import deepcopy
 
 
 class FocalLoss(nn.Module):
@@ -50,10 +49,26 @@ class FocalLoss(nn.Module):
             return loss.sum()
 
 
+def fft_transfer(ys_time, SIZE=1250):
+    ys_freq = np.zeros((ys_time.shape[0],SIZE))
+    ys_time = ys_time.squeeze()
+    if len(list(ys_time.size())) == 1:
+        ys_freq = np.fft.fft(ys_time)
+    else:
+        for i in range(ys_time.size(dim=0)):
+            y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
+            ys_freq[i] = y_freq
+    return torch.tensor(ys_freq.reshape((ys_time.shape[0], 1, SIZE, 1)))
+
+
 def main():
     # Hyperparameters
+    seed = 222
+    torch.manual_seed(seed)
     BATCH_SIZE = args.batchsz
+    BATCH_SIZE_TEST = args.batchsz
     LR = args.lr
+    TH = args.th
     EPOCH = args.epoch
     SIZE = args.size
     path_data = args.path_data
@@ -62,17 +77,16 @@ def main():
     validation_step = args.valid_step
 
     # Instantiating NN
-    net = IEGMNet()
+    net = IEGMNet_FFT()
     net.train()
     net = net.float().to(device)
 
     # Start dataset loading
     trainset = IEGM_DataSET(root_dir=path_data,
-                            indice_dir=path_indices,
-                            mode='train',
-                            size=SIZE,
-                            transform=transforms.Compose([ToTensor()]))
-
+                                indice_dir=path_indices,
+                                mode='train',
+                                size=SIZE,
+                                transform=transforms.Compose([ToTensor()]))
 
     valid_size = int(validation_split * len(trainset))
     train_size = len(trainset) - valid_size
@@ -91,9 +105,13 @@ def main():
 
     Train_loss = []
     Train_acc = []
+    # Test_loss = []
+    # Test_acc = []
+    FB_scores = []
     Valid_loss = []
     Valid_acc = []
     min_valid_loss = np.inf
+    max_FB = -np.inf
     start = time.time()
 
     print("Start training")
@@ -105,6 +123,7 @@ def main():
         i = 0
         for j, data in enumerate(trainloader, 0):
             inputs, labels = data['IEGM_seg'], data['label']
+            inputs = torch.cat((inputs, fft_transfer(inputs)),1)
             inputs = inputs.float().to(device)
             labels = labels.to(device)
 
@@ -114,7 +133,7 @@ def main():
             loss.backward()
             optimizer.step()
 
-            predicted = (outputs.data[:, 1] > 0.5).float()
+            predicted = (outputs.data[:, 1] > TH).float()
             correct += (predicted == labels).sum()
             accuracy += correct / BATCH_SIZE
             correct = 0.0
@@ -128,6 +147,9 @@ def main():
         Train_loss.append(running_loss / i)
         Train_acc.append((accuracy / i).item())
 
+        # running_loss = 0.0
+        # accuracy = 0.0
+
         correct = 0.0
         total = 0.0
         i = 0.0
@@ -135,36 +157,58 @@ def main():
 
         if epoch % validation_step == 0:
             net.eval()
+            segs_TP = 0
+            segs_TN = 0
+            segs_FP = 0
+            segs_FN = 0
             with torch.no_grad():
                 for data_valid in validloader:
                     IEGM_valid, labels_valid = data_valid['IEGM_seg'], data_valid['label']
+                    IEGM_valid = torch.cat((IEGM_valid, fft_transfer(IEGM_valid)), 1)
                     IEGM_valid = IEGM_valid.float().to(device)
                     labels_valid = labels_valid.to(device)
                     outputs_valid = net(IEGM_valid)
-                    predicted_valid = (outputs_valid.data[:, 1] > 0.5).float()
+                    predicted_valid = (outputs_valid.data[:, 1] > TH).float()
                     total += labels_valid.size(0)
-                    # print(outputs.data[:, 1].shape,'+',labels_valid.shape)
                     correct += (predicted_valid == labels_valid).sum()
+
+                    seg_labels = deepcopy(labels_valid)
+                    for seg_label in seg_labels:
+                        if seg_label == 0:
+                            segs_FP += (labels_valid.size(0) - (predicted_valid == labels_valid).sum()).item()
+                            segs_TN += (predicted_valid == labels_valid).sum().item()
+                        elif seg_label == 1:
+                            segs_FN += (labels_valid.size(0) - (predicted_valid == labels_valid).sum()).item()
+                            segs_TP += (predicted_valid == labels_valid).sum().item()
+
 
                     loss_valid = criterion(outputs_valid, labels_valid)
                     running_loss_valid += loss_valid.item()
                     i += 1
 
+                # report metrics
                 print('Valid Acc: %.5f Valid Loss: %.5f' % (correct / total, running_loss_valid / i))
+                FB_score = FB([segs_TP, segs_FN, segs_FP, segs_TN])
+                print('FB score: %.5f' % (FB_score))
 
                 Valid_loss.append(running_loss_valid / i)
                 Valid_acc.append((correct / total).item())
-                if min_valid_loss > running_loss_valid / i:
-                    min_valid_loss = running_loss_valid / i
-                    torch.save(net, './saved_models/IEGM_net_valid_split.pkl')
-                    torch.save(net.state_dict(), './saved_models/IEGM_net_valid_split_state.pkl')
-
+                FB_scores.append(FB_score)
+                # if min_valid_loss > running_loss_valid / i:
+                #     min_valid_loss = running_loss_valid / i
+                #     torch.save(net, './saved_models/IEGM_net_quantize.pkl')
+                #     torch.save(net.state_dict(), './saved_models/IEGM_net_quantize_state_dict.pkl')
+                # Save the model with highest FB score
+                if max_FB < FB_score:
+                    max_FB = FB_score
+                    torch.save(net, './saved_models/IEGM_net_quantize.pkl')
+                    torch.save(net.state_dict(), './saved_models/IEGM_net_quantize_state_dict.pkl')
 
     stop = time.time()
     total_time = stop - start
     print("Total training time:" + str(total_time) + 's')
 
-    file = open('./saved_models/loss_acc_valid_split.txt', 'w')
+    file = open('./saved_models/loss_acc_quantize.txt', 'w')
     file.write("Train_loss\n")
     file.write(str(Train_loss))
     file.write('\n\n')
@@ -177,6 +221,9 @@ def main():
     file.write("Valid_acc\n")
     file.write(str(Valid_acc))
     file.write('\n\n')
+    file.write("FBeta Score\n")
+    file.write(str(FB_scores))
+    file.write('\n\n')
     file.write("Total training time\n")
     file.write(str(total_time))
     file.write('\n\n')
@@ -186,94 +233,28 @@ def main():
     #                            train_label='training accuracy', val_label='validation accuracy', title='Accuracy Plot')
 
     print('Finish training')
+    torch.cuda.empty_cache()
 
-
-def thr_test():
-    net = torch.load(args.path_net + 'IEGM_net_valid_split.pkl', map_location='cuda:0')
-    net.eval()
-    net = net.float().to(device)
-
-    # load valiation data
-    trainset_th = IEGM_DataSET(root_dir=args.path_data,
-                               indice_dir=args.path_indices,
-                               mode='train',
-                               size=args.size,
-                               transform=transforms.Compose([ToTensor()]))
-
-    valid_size_th = int(args.path_vtr * len(trainset_th))
-    train_size_th = len(trainset_th) - valid_size_th
-    train_dataset_th, valid_dataset_th = torch.utils.data.random_split(trainset_th, [train_size_th, valid_size_th])
-
-    validloader_th = DataLoader(valid_dataset_th, batch_size=args.batchsz, shuffle=True, num_workers=0)
-
-    # code for turn threshould
-    TH = np.linspace(0.3, 0.7, num=10)
-    FBs = []
-    segs_TP = 0
-    segs_TN = 0
-    segs_FP = 0
-    segs_FN = 0
-
-    for th in TH:
-        for data_valid_th in validloader_th:
-            IEGM_valid_th, labels_valid_th = data_valid_th['IEGM_seg'], data_valid_th['label']
-            seg_label_th = deepcopy(labels_valid_th)
-
-            IEGM_valid_th = IEGM_valid_th.float().to(device)
-            labels_valid_th = labels_valid_th.to(device)
-            outputs_valid_th = net(IEGM_valid_th)
-            predicted_valid_th = (outputs_valid_th.data[:, 1] > th).float()
-
-            # construct mylist
-            for label_th in seg_label_th:
-                if label_th == 0:
-                    segs_FP += (labels_valid_th.size(0) - (predicted_valid_th == labels_valid_th).sum()).item()
-                    segs_TN += (predicted_valid_th == labels_valid_th).sum().item()
-                elif label_th == 1:
-                    segs_FN += (labels_valid_th.size(0) - (predicted_valid_th == labels_valid_th).sum()).item()
-                    segs_TP += (predicted_valid_th == labels_valid_th).sum().item()
-
-        fb = round(FB([segs_TP, segs_FN, segs_FP, segs_TN]), 5)
-        print("F-B = " + str(fb))
-        FBs.append(fb)
-
-    # Plot fb and threshold
-    plt.plot(TH, FBs)
-    plt.xlabel('threshold')
-    plt.ylabel('FB')
-    plt.title('Threshold vs FB')
-    plt.show()
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--epoch', type=int, help='epoch number', default=5)
+    argparser.add_argument('--epoch', type=int, help='epoch number', default=20)
+    argparser.add_argument('--lr', type=float, help='learning rate', default=0.001)
+    argparser.add_argument('--th', type=float, help='threshold for label smoothing', default=0.6)
     argparser.add_argument('--batchsz', type=int, help='total batchsz for traindb', default=32)
     argparser.add_argument('--cuda', type=int, default=0)
     argparser.add_argument('--size', type=int, default=1250)
+    # argparser.add_argument('--path_data', type=str, default='H:/Date_Experiment/data_IEGMdb_ICCAD_Contest/segments-R250'
+    #                                                         '-BPF15_55-Noise/tinyml_contest_data_training/')
     argparser.add_argument('--path_data', type=str, default='./data/')
     argparser.add_argument('--path_indices', type=str, default='./data_indices')
     argparser.add_argument('--path_vtr', type=float, help='Validate train ratio', default=0.2)
     argparser.add_argument('--valid_step', type=int, help='number of epoch for evaluation', default=1)
-    argparser.add_argument('--lr', type=float, help='learning rate', default=0.0001)
-    argparser.add_argument('--path_net', type=str, default='./saved_models/')
 
     args = argparser.parse_args()
 
-    device = torch.device("mps")
+    device = torch.device("cuda:" + str(args.cuda))
 
     print("device is --------------", device)
-    torch.cuda.empty_cache()
 
-    # if you want to train model, set isTrain = True
-    # Must set Ture for the first time!
-    isTrain = False
-    if isTrain:
-        main()
-
-    # If you already have the best model and want to find best threshold on it, please set isThrehold = True
-    isThreshod = True
-    if isThreshod:
-        thr_test()
-
-
-
+    main()

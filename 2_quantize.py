@@ -6,7 +6,19 @@ from torch.utils.data import DataLoader
 from copy import deepcopy
 import torchvision.transforms as transforms
 
-from help_code_demo import ToTensor, IEGM_DataSET_fft, stats_report
+from help_code_demo import ToTensor, stats_report, IEGM_DataSET
+import time
+
+def fft_transfer(ys_time, SIZE=1250):
+    ys_freq = np.zeros((ys_time.shape[0],SIZE))
+    ys_time = ys_time.squeeze()
+    if len(list(ys_time.size())) == 1:
+        ys_freq = np.fft.fft(ys_time)
+    else:
+        for i in range(ys_time.size(dim=0)):
+            y_freq = np.fft.fft(ys_time[i, :])  # calculate fft on series
+            ys_freq[i] = y_freq
+    return torch.tensor(ys_freq.reshape((ys_time.shape[0], 1, SIZE, 1)))
 
 
 def main():
@@ -24,15 +36,26 @@ def main():
     path_records = args.path_record
     path_net = args.path_net
     path_indices = args.path_indices
-    stats_file = open(path_records + 'seg_stat_valid_split_NiN.txt', 'w')
+    stats_file = open(path_records + '2_quantize.txt', 'w')
 
     # load trained network
-    net = torch.load(path_net + 'IEGM_net_valid_split_NiN.pkl', map_location='cuda:0')
-    net.eval()
-    net.cuda()
-    device = torch.device('cuda:0')
+    net = torch.load(path_net + 'IEGM_net_quantize.pkl', map_location='cpu')
 
-    testset = IEGM_DataSET_fft(root_dir=path_data,
+    net.eval()
+    # Dynamic PTQ
+    # net = torch.quantization.quantize_dynamic(
+    #     net,
+    #     {torch.nn.Linear}
+    # )
+
+    # Statistic PTQ
+    net.qconfig = torch.quantization.get_default_qconfig('qnnpack')
+    net.fuse_model()
+    net_prepared = torch.quantization.prepare(net)
+
+    device = torch.device('cpu')
+
+    testset = IEGM_DataSET(root_dir=path_data,
                            indice_dir=path_indices,
                            mode='test',
                            size=SIZE,
@@ -44,17 +67,18 @@ def main():
     segs_TN = 0
     segs_FP = 0
     segs_FN = 0
-
-
+    # breakpoint()
+    start = time.time()
     for data_test in testloader:
         IEGM_test, labels_test = data_test['IEGM_seg'], data_test['label']
         seg_label = deepcopy(labels_test)
+        IEGM_test = torch.cat((IEGM_test, fft_transfer(IEGM_test)), 1)
+        IEGM_test = IEGM_test.float()
 
-        IEGM_test = IEGM_test.float().to(device)
-        labels_test = labels_test.to(device)
-
-        outputs_test = net(IEGM_test)
-        predicted_test = (outputs_test.data[:,1] > TH).float()
+        net_prepared(IEGM_test)
+        net_int8 = torch.quantization.convert(net_prepared)
+        outputs_test = net_int8(IEGM_test)
+        predicted_test = (outputs_test.data[:,1] > TH)
 
         if seg_label == 0:
             segs_FP += (labels_test.size(0) - (predicted_test == labels_test).sum()).item()
@@ -67,7 +91,10 @@ def main():
     stats_file.write('segments: TP, FN, FP, TN\n')
     output_segs = stats_report([segs_TP, segs_FN, segs_FP, segs_TN])
     stats_file.write(output_segs + '\n')
-
+    stop = time.time()
+    interval = stop - start
+    print('interval: '+str(interval))
+    torch.save(net, './saved_models/1_after_quant.pkl')
     del net
 
 
