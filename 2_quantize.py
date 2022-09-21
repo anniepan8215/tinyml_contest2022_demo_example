@@ -49,9 +49,10 @@ def main():
     # )
 
     # Statistic PTQ
-    net.qconfig = torch.quantization.get_default_qconfig('qnnpack')
+    net.qconfig = torch.quantization.get_default_qconfig("qnnpack")
     net.fuse_model()
     net_prepared = torch.quantization.prepare(net)
+    net_int8 = torch.quantization.convert(net_prepared)
 
     device = torch.device('cpu')
 
@@ -75,8 +76,6 @@ def main():
         IEGM_test = torch.cat((IEGM_test, fft_transfer(IEGM_test)), 1)
         IEGM_test = IEGM_test.float()
 
-        net_prepared(IEGM_test)
-        net_int8 = torch.quantization.convert(net_prepared)
         outputs_test = net_int8(IEGM_test)
         predicted_test = (outputs_test.data[:,1] > TH)
 

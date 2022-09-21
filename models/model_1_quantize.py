@@ -11,6 +11,13 @@ class ConvReLUBN(nn.Sequential):
             nn.ReLU(True)
         )
 
+class fcnReLU(nn.Sequential):
+    def __init__(self, in_features, out_features):
+        super(fcnReLU, self).__init__(
+            nn.Linear(in_features=in_features, out_features=out_features),
+            nn.ReLU()
+        )
+
 
 class IEGMNet_FFT(nn.Module):
 
@@ -18,6 +25,8 @@ class IEGMNet_FFT(nn.Module):
         for m in self.modules():
             if type(m) == ConvReLUBN:
                 torch.quantization.fuse_modules(m, [['0', '1', '2']], inplace=True)
+            if type(m) == fcnReLU:
+                torch.quantization.fuse_modules(m, [['0', '1']], inplace=True)
 
     def __init__(self):
         super(IEGMNet_FFT, self).__init__()
@@ -29,13 +38,9 @@ class IEGMNet_FFT(nn.Module):
         self.conv4 = ConvReLUBN(20, 40, kernel_size=(4, 1), stride=(2, 1))
         self.conv5 = ConvReLUBN(40, 40, kernel_size=(4, 1), stride=(2, 1))
 
-        self.fc1 = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(in_features=40 * 37 * 1, out_features=10)
-        )
-        self.fc2 = nn.Sequential(
-            nn.Linear(in_features=10, out_features=2)
-        )
+        self.dropout = nn.Dropout(0.5)
+        self.fc1 = fcnReLU(in_features=40*37*1,out_features=10)
+        self.fc2 = nn.Linear(in_features=10, out_features=2)
 
         self.dequant = torch.quantization.DeQuantStub()
 
@@ -47,7 +52,9 @@ class IEGMNet_FFT(nn.Module):
         conv4_output = self.conv4(conv3_output)
         conv5_output = self.conv5(conv4_output)
         conv5_output = conv5_output.reshape(-1, 40 * 37 * 1)
-        fc1_output = F.relu(self.fc1(conv5_output))
-        output = F.softmax(self.fc2(fc1_output))
+        drpout_output = self.dropout(conv5_output)
+        fc1_output = self.fc1(drpout_output)
+        output = self.fc2(fc1_output)
         output = self.dequant(output)
+        output = F.softmax(output)
         return output

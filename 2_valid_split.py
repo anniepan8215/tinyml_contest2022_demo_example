@@ -194,15 +194,15 @@ def main():
                 Valid_loss.append(running_loss_valid / i)
                 Valid_acc.append((correct / total).item())
                 FB_scores.append(FB_score)
-                # if min_valid_loss > running_loss_valid / i:
-                #     min_valid_loss = running_loss_valid / i
-                #     torch.save(net, './saved_models/IEGM_net_quantize.pkl')
-                #     torch.save(net.state_dict(), './saved_models/IEGM_net_quantize_state_dict.pkl')
-                # Save the model with highest FB score
-                if max_FB < FB_score:
-                    max_FB = FB_score
+                if min_valid_loss > running_loss_valid / i:
+                    min_valid_loss = running_loss_valid / i
                     torch.save(net, './saved_models/IEGM_net_quantize.pkl')
                     torch.save(net.state_dict(), './saved_models/IEGM_net_quantize_state_dict.pkl')
+                # Save the model with highest FB score
+                # if max_FB < FB_score:
+                #     max_FB = FB_score
+                #     torch.save(net, './saved_models/IEGM_net_quantize.pkl')
+                #     torch.save(net.state_dict(), './saved_models/IEGM_net_quantize_state_dict.pkl')
 
     stop = time.time()
     total_time = stop - start
@@ -238,7 +238,7 @@ def main():
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--epoch', type=int, help='epoch number', default=1)
+    argparser.add_argument('--epoch', type=int, help='epoch number', default=20)
     argparser.add_argument('--lr', type=float, help='learning rate', default=0.001)
     argparser.add_argument('--th', type=float, help='threshold for label smoothing', default=0.6)
     argparser.add_argument('--batchsz', type=int, help='total batchsz for traindb', default=32)
