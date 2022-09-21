@@ -51,4 +51,4 @@ class model_1_tf(tf.keras.Model):
 
         fc1_output = self.fc1(conv5_output)
         fc2_output = self.fc2(fc1_output)
-        return fc2_output
+        return nn.softmax(fc2_output)
